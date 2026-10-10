@@ -1,17 +1,17 @@
 # Graph Report - jellyfin-player  (2026-10-11)
 
 ## Corpus Check
-- 25 files · ~29,239 words
+- 25 files · ~29,417 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 19 file(s) not represented in the graph (top: .xml 12, .properties 2, (none) 1)
 
 ## Summary
-- 607 nodes · 1381 edges · 33 communities (14 shown, 19 thin omitted)
+- 611 nodes · 1387 edges · 33 communities (15 shown, 18 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `dc1e82eb`
+- Built from commit: `de6d32fb`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -27,11 +27,11 @@
 - HomeScreen
 - PlayerScreen
 - Composable
-- SettingsScreen
-- AppPreferences
-- .onCreate
-- AccentPalette
 - UserCustomizations
+- AppPreferences
+- MainActivity
+- AccentPalette
+- PlayerLayoutStyle
 - Offset
 - Caratteristiche & Customizzazioni
 - StreamingQuality
@@ -60,13 +60,13 @@
   app/src/main/java/com/jellymusic/player/JellyMusicApp.kt → app/src/main/java/com/jellymusic/player/playback/PlayerController.kt
 - `JellyMusicApp` --references--> `AppPreferences`  [EXTRACTED]
   app/src/main/java/com/jellymusic/player/JellyMusicApp.kt → app/src/main/java/com/jellymusic/player/preferences/AppPreferences.kt
-- `MainNavigationHost()` --references--> `UserCustomizations`  [EXTRACTED]
-  app/src/main/java/com/jellymusic/player/MainActivity.kt → app/src/main/java/com/jellymusic/player/preferences/AppPreferences.kt
+- `MainNavigationHost()` --calls--> `HomeScreen()`  [EXTRACTED]
+  app/src/main/java/com/jellymusic/player/MainActivity.kt → app/src/main/java/com/jellymusic/player/ui/screens/HomeScreen.kt
 
 ## Import Cycles
 - None detected.
 
-## Communities (33 total, 19 thin omitted)
+## Communities (33 total, 18 thin omitted)
 
 ### Community 0 - "JellyfinItem"
 Cohesion: 0.08
@@ -75,6 +75,10 @@ Nodes (17): JellyfinClient, AuthRequest, AuthResponse, ItemsResponse, JellyfinIt
 ### Community 1 - "PlayerController"
 Cohesion: 0.05
 Nodes (3): ArtworkContentProvider, PlayerController, Listener
+
+### Community 4 - "JellyMusicApp.kt"
+Cohesion: 0.06
+Nodes (4): DebugLogManager, JellyMusicApp, SectionHeader(), SettingsScreen()
 
 ### Community 5 - "LibraryScreen"
 Cohesion: 0.11
@@ -92,17 +96,17 @@ Nodes (10): DragSample, formatMs(), lerpDp(), lerpFloat(), PlaybackSpeedDialog()
 Cohesion: 0.33
 Nodes (6): BackgroundVoiceRow(), LyricLineItem(), LyricsPanel(), MainVoiceRow(), PillButton(), SyllableItem()
 
-### Community 17 - "SettingsScreen"
-Cohesion: 0.22
-Nodes (4): BottomNavItem(), MainNavigationHost(), SectionHeader(), SettingsScreen()
+### Community 17 - "UserCustomizations"
+Cohesion: 0.31
+Nodes (4): BottomNavItem(), MainNavigationHost(), UserCustomizations, JellyMusicTheme()
 
 ### Community 21 - "AccentPalette"
 Cohesion: 0.25
 Nodes (7): AccentPalette, CYBERPUNK_CYAN, DYNAMIC, EMERALD_FOREST, JELLYFIN_PURPLE, SAKURA_PINK, SUNSET_AMBER
 
-### Community 22 - "UserCustomizations"
-Cohesion: 0.25
-Nodes (6): PlayerLayoutStyle, COMPACT_CARD, MINIMALIST, MODERN_HERO, UserCustomizations, JellyMusicTheme()
+### Community 22 - "PlayerLayoutStyle"
+Cohesion: 0.40
+Nodes (4): PlayerLayoutStyle, COMPACT_CARD, MINIMALIST, MODERN_HERO
 
 ### Community 23 - "Offset"
 Cohesion: 0.32
@@ -126,8 +130,8 @@ Nodes (4): SheetMode, ART, LYRICS, QUEUE
 
 ## Knowledge Gaps
 - **34 isolated node(s):** `SYSTEM`, `LIGHT`, `DARK`, `AMOLED`, `DYNAMIC` (+29 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 217 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 219 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -138,11 +142,11 @@ _Questions this graph is uniquely positioned to answer:_
   _34 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `JellyfinItem` be split into smaller, more focused modules?**
   _Cohesion score 0.08397337429595494 - nodes in this community are weakly interconnected._
-- **Why does `UserCustomizations` connect `UserCustomizations` to `PlayerScreen.kt`, `LibraryScreen`, `MainActivity.kt`, `HomeScreen.kt`, `SettingsScreen.kt`, `LibraryScreen.kt`, `HomeScreen`, `Theme.kt`, `PlayerScreen`, `SettingsScreen`, `AppPreferences.kt`, `AppPreferences`, `.onCreate`, `AccentPalette`, `StreamingQuality`, `ThemeMode`?**
-  _High betweenness centrality (0.092) - this node is a cross-community bridge._
+- **Why does `UserCustomizations` connect `UserCustomizations` to `PlayerScreen.kt`, `JellyMusicApp.kt`, `LibraryScreen`, `MainActivity.kt`, `HomeScreen.kt`, `SettingsScreen.kt`, `LibraryScreen.kt`, `HomeScreen`, `Theme.kt`, `PlayerScreen`, `AppPreferences.kt`, `AppPreferences`, `AccentPalette`, `PlayerLayoutStyle`, `StreamingQuality`, `ThemeMode`?**
+  _High betweenness centrality (0.091) - this node is a cross-community bridge._
 - **Should `PlayerController` be split into smaller, more focused modules?**
-  _Cohesion score 0.05021173623714459 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0514216575922565 - nodes in this community are weakly interconnected._
 - **Why does `JellyfinItem` connect `JellyfinItem` to `PlayerController`, `PlaybackService.kt`, `LibraryScreen`, `HomeScreen.kt`, `LibraryScreen.kt`, `HomeScreen`?**
-  _High betweenness centrality (0.090) - this node is a cross-community bridge._
+  _High betweenness centrality (0.091) - this node is a cross-community bridge._
 - **Should `PlayerScreen.kt` be split into smaller, more focused modules?**
   _Cohesion score 0.04081632653061224 - nodes in this community are weakly interconnected._

@@ -229,14 +229,24 @@ class PlayerController(
     }
 
     fun skipNext() {
-        exoPlayer?.let {
-            if (it.hasNextMediaItem()) it.seekToNextMediaItem()
+        val player = exoPlayer ?: return
+        if (player.hasNextMediaItem()) {
+            player.seekToNextMediaItem()
+        } else {
+            player.seekTo(0L)
+            player.play()
+            _state.value = _state.value.copy(currentPositionMs = 0L)
         }
     }
 
     fun skipPrevious() {
-        exoPlayer?.let {
-            if (it.hasPreviousMediaItem()) it.seekToPreviousMediaItem()
+        val player = exoPlayer ?: return
+        if (player.hasPreviousMediaItem() && player.currentPosition <= 5000L) {
+            player.seekToPreviousMediaItem()
+        } else {
+            player.seekTo(0L)
+            player.play()
+            _state.value = _state.value.copy(currentPositionMs = 0L)
         }
     }
 

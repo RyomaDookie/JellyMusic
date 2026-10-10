@@ -665,6 +665,22 @@ class PlaybackService : MediaLibraryService() {
                     super.seekTo(mediaItemIndex, positionMs)
                 }
             }
+
+            override fun seekToNext() {
+                JellyMusicApp.instance.playerController.skipNext()
+            }
+
+            override fun seekToNextMediaItem() {
+                JellyMusicApp.instance.playerController.skipNext()
+            }
+
+            override fun seekToPrevious() {
+                JellyMusicApp.instance.playerController.skipPrevious()
+            }
+
+            override fun seekToPreviousMediaItem() {
+                JellyMusicApp.instance.playerController.skipPrevious()
+            }
         }
         forwardingPlayerInstance = forwardingPlayer
 

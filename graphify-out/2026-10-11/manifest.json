@@ -1,0 +1,152 @@
+{
+  "app/build.gradle.kts": {
+    "mtime": 1791670431.7818332,
+    "seen": 1791670522.0131483,
+    "ast_hash": "e01ef6030acc7a4997b992d99739ecf9",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/JellyMusicApp.kt": {
+    "mtime": 1791666335.0031354,
+    "seen": 1791669839.0346339,
+    "ast_hash": "58df32a52e5727e89236dddc2c0f335e",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/MainActivity.kt": {
+    "mtime": 1791664247.7493467,
+    "seen": 1791669839.0346372,
+    "ast_hash": "b3e578e0ff20cddb67f18ff6a5f1ab3c",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/data/JellyfinClient.kt": {
+    "mtime": 1791658536.4541092,
+    "seen": 1791669839.0346394,
+    "ast_hash": "30cbe17712015147670e0fe852270aef",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/data/JellyfinModels.kt": {
+    "mtime": 1791670347.8917212,
+    "seen": 1791670522.013162,
+    "ast_hash": "fdcb137117d63e7de0c8ba00074406fd",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/data/LyricsService.kt": {
+    "mtime": 1791670374.2394712,
+    "seen": 1791670522.0131636,
+    "ast_hash": "d9ace181ba7ab9d3432dd9366b49a88e",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/debug/DebugLogManager.kt": {
+    "mtime": 1791479881.8805928,
+    "seen": 1791669839.0346458,
+    "ast_hash": "bbe0baa6c133477d286814f47a0da1af",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/playback/ArtworkContentProvider.kt": {
+    "mtime": 1791486078.097963,
+    "seen": 1791669839.0346475,
+    "ast_hash": "f607dcfda96f36bcddebecb7ca70f43a",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/playback/PlaybackService.kt": {
+    "mtime": 1791578947.7720451,
+    "seen": 1791669839.0346494,
+    "ast_hash": "8f5bec500b6db2bcb289fb58edd6ae47",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/playback/PlayerController.kt": {
+    "mtime": 1791668099.809238,
+    "seen": 1791669839.034651,
+    "ast_hash": "cfbf6854d0557f8db3698fd489494847",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/preferences/AppPreferences.kt": {
+    "mtime": 1791654990.6449955,
+    "seen": 1791669839.0346532,
+    "ast_hash": "22837f5c1e3db8b0f7ae3acd594bc699",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/components/MiniPlayer.kt": {
+    "mtime": 1791468547.572106,
+    "seen": 1791669839.034655,
+    "ast_hash": "9f52a980ce9cb4763727c3341e5caed6",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/screens/HomeScreen.kt": {
+    "mtime": 1791664130.147237,
+    "seen": 1791669839.034657,
+    "ast_hash": "c0dea2b9ff2bde4d9844769bb7424ed8",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/screens/LibraryScreen.kt": {
+    "mtime": 1791665436.755874,
+    "seen": 1791669839.034659,
+    "ast_hash": "2be0c8e3e064aad5a927b8153163a296",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/screens/LoginScreen.kt": {
+    "mtime": 1791454528.0223565,
+    "seen": 1791669839.0346606,
+    "ast_hash": "dbb88f7fa55d0240a5f6d072b8ccef2a",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt": {
+    "mtime": 1791670424.7858536,
+    "seen": 1791670522.0131772,
+    "ast_hash": "11cc74477f98c877bf8c77ffac0018b2",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/screens/SettingsScreen.kt": {
+    "mtime": 1791660637.0787585,
+    "seen": 1791669839.0346642,
+    "ast_hash": "d13731ddb15cbd5ba20e75f95bf685d6",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/theme/Color.kt": {
+    "mtime": 1791653750.9805431,
+    "seen": 1791669839.034666,
+    "ast_hash": "2780a2aabd519cb3b16ff1a3350a14b6",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/theme/PaletteUtils.kt": {
+    "mtime": 1791655053.5903714,
+    "seen": 1791669839.0346677,
+    "ast_hash": "2468c9df542b9c5809189b14629c5b07",
+    "semantic_hash": ""
+  },
+  "app/src/main/java/com/jellymusic/player/ui/theme/Theme.kt": {
+    "mtime": 1791454376.5003548,
+    "seen": 1791669839.0346699,
+    "ast_hash": "054a51547fd15113d009262812c0dcc8",
+    "semantic_hash": ""
+  },
+  "app/src/test/java/com/jellymusic/player/JellyfinClientTest.kt": {
+    "mtime": 1791452039.7569582,
+    "seen": 1791669839.0346718,
+    "ast_hash": "3beda209b9757462d0fee13604d4c82b",
+    "semantic_hash": ""
+  },
+  "build.gradle.kts": {
+    "mtime": 1791451233.358209,
+    "seen": 1791669839.0346737,
+    "ast_hash": "473cc1973cff840c8e2d4217b6afc5e6",
+    "semantic_hash": ""
+  },
+  "gradlew": {
+    "mtime": 1791452339.7415216,
+    "seen": 1791669839.0346763,
+    "ast_hash": "a43be8432bac3ffd05b3769aa42fe996",
+    "semantic_hash": ""
+  },
+  "settings.gradle.kts": {
+    "mtime": 1791451230.258454,
+    "seen": 1791669839.034678,
+    "ast_hash": "46bc5950585a90a00e03c6c8bdfa9924",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1791451532.970178,
+    "seen": 1791669839.03468,
+    "ast_hash": "ca347336a159a3e94d412c75b13e04bc",
+    "semantic_hash": ""
+  }
+}
