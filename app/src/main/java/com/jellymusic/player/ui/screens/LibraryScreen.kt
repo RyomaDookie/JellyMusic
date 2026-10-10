@@ -3,7 +3,6 @@ package com.jellymusic.player.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,13 +38,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -95,11 +91,9 @@ private val AppleTextSecondary = Color(0xFFC5C6CF)
 
 // Survives tab switching to avoid blank flicker
 private var cachedPlaylists: List<JellyfinItem> = emptyList()
-private var cachedAlbums: List<JellyfinItem> = emptyList()
 
 enum class LibraryCategory(val displayName: String) {
     PLAYLISTS("Playlist"),
-    ARTISTS("Artisti"),
     ALBUMS("Album"),
     TRACKS("Brani"),
     FAVORITES("Preferiti")
@@ -131,77 +125,74 @@ fun LibraryScreen(
     var isSearchVisible by remember { mutableStateOf(false) }
 
     var tracks by remember { mutableStateOf(controller.cachedTracks) }
-    var albums by remember { mutableStateOf(cachedAlbums) }
     var playlists by remember { mutableStateOf(cachedPlaylists) }
-    var isLoading by remember { mutableStateOf(false) }
+    var favoritesList by remember { mutableStateOf<List<JellyfinItem>>(emptyList()) }
 
     var currentSort by remember { mutableStateOf(TrackSortOption.DATE_ADDED_DESC) }
     var showSortMenu by remember { mutableStateOf(false) }
 
     var selectedAlbum by remember { mutableStateOf<JellyfinItem?>(null) }
-    var albumTracks by remember { mutableStateOf<List<JellyfinItem>>(emptyList()) }
-    var isAlbumTracksLoading by remember { mutableStateOf(false) }
-
     var selectedPlaylist by remember { mutableStateOf<JellyfinItem?>(null) }
     var playlistTracks by remember { mutableStateOf<List<JellyfinItem>>(emptyList()) }
     var isPlaylistTracksLoading by remember { mutableStateOf(false) }
-
-    var selectedArtist by remember { mutableStateOf<String?>(null) }
 
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var trackToAddToPlaylist by remember { mutableStateOf<JellyfinItem?>(null) }
 
     // Intercept back navigation
-    BackHandler(enabled = selectedAlbum != null || selectedPlaylist != null || selectedArtist != null) {
+    BackHandler(enabled = selectedAlbum != null || selectedPlaylist != null) {
         when {
             selectedAlbum != null -> selectedAlbum = null
             selectedPlaylist != null -> selectedPlaylist = null
-            selectedArtist != null -> selectedArtist = null
         }
     }
 
     LaunchedEffect(Unit) {
-        isLoading = tracks.isEmpty()
         client.getAudioTracks().onSuccess {
             tracks = it
             controller.updateCachedTracks(it)
-            isLoading = false
-        }.onFailure { isLoading = false }
-
-        client.getAlbums().onSuccess {
-            albums = it
-            cachedAlbums = it
         }
 
         client.getPlaylists().onSuccess {
             playlists = it
             cachedPlaylists = it
         }
-    }
 
-    val favoriteTracks = remember(tracks) { tracks.filter { it.isFavorite } }
-    val artistsList = remember(tracks) {
-        tracks.map { it.artistName }.filter { it.isNotBlank() && it != "Unknown Artist" }.distinct().sorted()
-    }
-
-    // Synthesize albums from tracks if albums API is empty
-    val effectiveAlbums = remember(albums, tracks) {
-        if (albums.isNotEmpty()) albums
-        else {
-            tracks.filter { !it.album.isNullOrBlank() }
-                .groupBy { it.album ?: "" }
-                .map { (albumTitle, trList) ->
-                    val first = trList.first()
-                    JellyfinItem(
-                        id = first.albumId ?: first.id,
-                        name = albumTitle,
-                        type = "MusicAlbum",
-                        artists = first.artists,
-                        album = albumTitle,
-                        container = first.container
-                    )
-                }
+        client.getFavorites().onSuccess {
+            favoritesList = it
         }
+    }
+
+    // Refresh favorites when state changes
+    val realFavorites = remember(tracks, favoritesList) {
+        val serverFavIds = favoritesList.map { it.id }.toSet()
+        tracks.filter { it.isFavorite || serverFavIds.contains(it.id) }
+    }
+
+    // Synthesize albums from tracks (group by album title)
+    val albumsList = remember(tracks) {
+        tracks.filter { !it.album.isNullOrBlank() }
+            .groupBy { it.album!!.trim() }
+            .map { (albumTitle, trList) ->
+                val first = trList.first()
+                JellyfinItem(
+                    id = first.id, // ID of first track gives accurate album artwork
+                    name = albumTitle,
+                    type = "MusicAlbum",
+                    artists = first.artists,
+                    album = albumTitle,
+                    container = first.container,
+                    dateCreated = first.dateCreated
+                )
+            }
+    }
+
+    // Function to get all tracks for an album
+    fun getTracksForAlbum(alb: JellyfinItem): List<JellyfinItem> {
+        val albTitle = alb.album ?: alb.name
+        return tracks.filter { trk ->
+            trk.album?.equals(albTitle, ignoreCase = true) == true
+        }.sortedBy { it.indexNumber ?: 0 }
     }
 
     // Filter & Sort
@@ -215,42 +206,40 @@ fun LibraryScreen(
         sortTracks(filtered, currentSort)
     }
 
-    val displayedAlbums = remember(effectiveAlbums, searchQuery, currentSort) {
-        val filtered = if (searchQuery.isBlank()) effectiveAlbums
-        else effectiveAlbums.filter {
+    val displayedAlbums = remember(albumsList, searchQuery, currentSort) {
+        val filtered = if (searchQuery.isBlank()) albumsList
+        else albumsList.filter {
             it.name.contains(searchQuery, ignoreCase = true) ||
             it.artistName.contains(searchQuery, ignoreCase = true)
         }
-        when (currentSort) {
-            TrackSortOption.TITLE_ASC -> filtered.sortedBy { it.name.lowercase() }
-            TrackSortOption.TITLE_DESC -> filtered.sortedByDescending { it.name.lowercase() }
-            TrackSortOption.ARTIST_ASC -> filtered.sortedBy { it.artistName.lowercase() }
-            else -> filtered
-        }
+        sortAlbums(filtered, currentSort)
     }
 
-    val displayedPlaylists = remember(playlists, searchQuery) {
-        if (searchQuery.isBlank()) playlists
+    val displayedPlaylists = remember(playlists, searchQuery, currentSort) {
+        val filtered = if (searchQuery.isBlank()) playlists
         else playlists.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        sortPlaylists(filtered, currentSort)
     }
 
-    val displayedArtists = remember(artistsList, searchQuery) {
-        if (searchQuery.isBlank()) artistsList
-        else artistsList.filter { it.contains(searchQuery, ignoreCase = true) }
-    }
-
-    val displayedFavorites = remember(favoriteTracks, searchQuery, currentSort) {
-        val filtered = if (searchQuery.isBlank()) favoriteTracks
-        else favoriteTracks.filter {
+    val displayedFavorites = remember(realFavorites, searchQuery, currentSort) {
+        val filtered = if (searchQuery.isBlank()) realFavorites
+        else realFavorites.filter {
             it.name.contains(searchQuery, ignoreCase = true) ||
             it.artistName.contains(searchQuery, ignoreCase = true)
         }
         sortTracks(filtered, currentSort)
     }
 
-    val selectedArtistTracks = remember(tracks, selectedArtist) {
-        if (selectedArtist != null) tracks.filter { it.artistName == selectedArtist }
-        else emptyList()
+    fun toggleFavorite(targetTrack: JellyfinItem) {
+        val newFav = !targetTrack.isFavorite
+        scope.launch {
+            client.setFavorite(targetTrack.id, newFav)
+            controller.updateTrackFavorite(targetTrack.id, newFav)
+            tracks = controller.cachedTracks
+            client.getFavorites().onSuccess {
+                favoritesList = it
+            }
+        }
     }
 
     Box(
@@ -260,17 +249,38 @@ fun LibraryScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp)
+            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
         ) {
-            // --- TOP APP BAR (from code.html) ---
+            // --- TOP HEADER (CLEAN APPLE STYLE, NO SERVER BADGE OR JELLYMUSIC TEXT) ---
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Column {
+                        Text(
+                            text = "Libreria",
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = when (selectedCategory) {
+                                LibraryCategory.ALBUMS -> "${albumsList.size} Album • Sincronizzato con Jellyfin"
+                                LibraryCategory.TRACKS -> "${tracks.size} Brani • Sincronizzato con Jellyfin"
+                                LibraryCategory.PLAYLISTS -> "${playlists.size} Playlist • Sincronizzato con Jellyfin"
+                                LibraryCategory.FAVORITES -> "${realFavorites.size} Preferiti • Sincronizzato con Jellyfin"
+                            },
+                            color = AppleTextMuted,
+                            fontSize = 13.sp
+                        )
+                    }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -279,60 +289,7 @@ fun LibraryScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x0DFFFFFF))
-                                .border(1.dp, Color(0x14FFFFFF), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Dns,
-                                contentDescription = "Server Jellyfin Connesso",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0x0FFFFFFF))
-                                .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White)
-                            )
-                            Text(
-                                text = "DIRECT • FLAC",
-                                color = AppleTextMuted,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "JellyMusic",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = (-0.4).sp
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(if (isSearchVisible) Color.White.copy(alpha = 0.18f) else Color.Transparent)
+                                .background(if (isSearchVisible) Color.White.copy(alpha = 0.2f) else Color(0x14FFFFFF))
                                 .clickable { isSearchVisible = !isSearchVisible },
                             contentAlignment = Alignment.Center
                         ) {
@@ -340,7 +297,7 @@ fun LibraryScreen(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Cerca",
                                 tint = if (isSearchVisible) Color.White else AppleTextMuted,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(19.dp)
                             )
                         }
 
@@ -348,7 +305,7 @@ fun LibraryScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x0FFFFFFF))
+                                .background(Color(0x14FFFFFF))
                                 .clickable { onOpenSettings() },
                             contentAlignment = Alignment.Center
                         ) {
@@ -356,7 +313,7 @@ fun LibraryScreen(
                                 imageVector = Icons.Outlined.Person,
                                 contentDescription = "Profilo",
                                 tint = Color.White,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(19.dp)
                             )
                         }
                     }
@@ -373,13 +330,13 @@ fun LibraryScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
                     ) {
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             placeholder = {
-                                Text("Cerca per titolo, artista, album...", color = Color(0xFF636366), fontSize = 14.sp)
+                                Text("Cerca nella libreria...", color = Color(0xFF636366), fontSize = 14.sp)
                             },
                             singleLine = true,
                             leadingIcon = {
@@ -407,14 +364,15 @@ fun LibraryScreen(
                 }
             }
 
-            // If an individual Album or Playlist is opened, show its detail header
+            // --- DETAIL SCREENS: ALBUM OR PLAYLIST OPENED ---
             if (selectedAlbum != null) {
                 val alb = selectedAlbum!!
+                val albTracks = getTracksForAlbum(alb)
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
                     ) {
                         IconButton(onClick = { selectedAlbum = null }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -460,7 +418,7 @@ fun LibraryScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "${albumTracks.size} brani • ${getQualityBadge(alb)}",
+                                    text = "${albTracks.size} brani",
                                     color = AppleTextMuted,
                                     fontSize = 12.sp
                                 )
@@ -469,13 +427,13 @@ fun LibraryScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        if (albumTracks.isNotEmpty()) {
+                        if (albTracks.isNotEmpty()) {
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(22.dp))
                                     .background(Color.White)
                                     .clickable {
-                                        controller.playQueue(albumTracks, 0, kbps)
+                                        controller.playQueue(albTracks, 0, kbps)
                                     }
                                     .padding(horizontal = 20.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -488,20 +446,19 @@ fun LibraryScreen(
                     }
                 }
 
-                if (isAlbumTracksLoading) {
+                if (albTracks.isEmpty()) {
                     item {
-                        Box(modifier = Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
-                        }
+                        EmptyPlaceholder("Nessun brano trovato per questo album")
                     }
                 } else {
-                    itemsIndexed(albumTracks) { index, trk ->
+                    itemsIndexed(albTracks) { index, trk ->
                         val isPlayingNow = playbackState.currentTrack?.id == trk.id && playbackState.isPlaying
                         TrackListItem(
                             track = trk,
                             index = index + 1,
                             isPlaying = isPlayingNow,
-                            onPlay = { controller.playQueue(albumTracks, index, kbps) },
+                            onPlay = { controller.playQueue(albTracks, index, kbps) },
+                            onToggleFavorite = { toggleFavorite(trk) },
                             onAddToPlaylist = { trackToAddToPlaylist = trk }
                         )
                     }
@@ -512,7 +469,7 @@ fun LibraryScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
                     ) {
                         IconButton(onClick = { selectedPlaylist = null }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -530,13 +487,18 @@ fun LibraryScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(100.dp)
+                                    .size(110.dp)
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(AppleSurface)
                                     .border(1.dp, AppleBorder, RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.QueueMusic, contentDescription = null, tint = AppleTextMuted, modifier = Modifier.size(44.dp))
+                                AsyncImage(
+                                    model = client.getArtworkUrl(pl.id, maxWidth = 300),
+                                    contentDescription = pl.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
                             }
 
                             Spacer(modifier = Modifier.width(16.dp))
@@ -588,9 +550,7 @@ fun LibraryScreen(
                     }
                 } else if (playlistTracks.isEmpty()) {
                     item {
-                        Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                            Text("Nessun brano in questa playlist", color = AppleTextMuted, fontSize = 14.sp)
-                        }
+                        EmptyPlaceholder("Nessun brano in questa playlist")
                     }
                 } else {
                     itemsIndexed(playlistTracks) { index, trk ->
@@ -600,140 +560,19 @@ fun LibraryScreen(
                             index = index + 1,
                             isPlaying = isPlayingNow,
                             onPlay = { controller.playQueue(playlistTracks, index, kbps) },
+                            onToggleFavorite = { toggleFavorite(trk) },
                             onAddToPlaylist = { trackToAddToPlaylist = trk }
                         )
                     }
                 }
-            } else if (selectedArtist != null) {
-                val artName = selectedArtist!!
-                val artistTracks = selectedArtistTracks
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        IconButton(onClick = { selectedArtist = null }) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Indietro", tint = Color.White)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Artisti", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text(
-                            text = artName,
-                            color = Color.White,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "${artistTracks.size} brani nella tua libreria",
-                            color = AppleTextMuted,
-                            fontSize = 13.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        if (artistTracks.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(Color.White)
-                                    .clickable {
-                                        controller.playQueue(artistTracks, 0, kbps)
-                                    }
-                                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Riproduci tutto", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-
-                itemsIndexed(artistTracks) { index, trk ->
-                    val isPlayingNow = playbackState.currentTrack?.id == trk.id && playbackState.isPlaying
-                    TrackListItem(
-                        track = trk,
-                        index = index + 1,
-                        isPlaying = isPlayingNow,
-                        onPlay = { controller.playQueue(artistTracks, index, kbps) },
-                        onAddToPlaylist = { trackToAddToPlaylist = trk }
-                    )
-                }
             } else {
-                // --- MAIN LIBRARY VIEW ---
-
-                // 1. Page Title & Action
+                // --- CATEGORIES LIST CARD (IOS SETTINGS PATTERN - NO ARTISTS TAB) ---
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Column {
-                            Text(
-                                text = "Libreria",
-                                color = Color.White,
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.5).sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = when (selectedCategory) {
-                                    LibraryCategory.ALBUMS -> "${effectiveAlbums.size} Album • Sincronizzato con Jellyfin"
-                                    LibraryCategory.TRACKS -> "${tracks.size} Brani • Sincronizzato con Jellyfin"
-                                    LibraryCategory.PLAYLISTS -> "${playlists.size} Playlist • Sincronizzato con Jellyfin"
-                                    LibraryCategory.ARTISTS -> "${artistsList.size} Artisti • Sincronizzato con Jellyfin"
-                                    LibraryCategory.FAVORITES -> "${favoriteTracks.size} Preferiti • Sincronizzato con Jellyfin"
-                                },
-                                color = AppleTextMuted,
-                                fontSize = 13.sp
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0x12FFFFFF))
-                                .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(16.dp))
-                                .clickable { showCreatePlaylistDialog = true }
-                                .padding(horizontal = 14.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = "Nuova",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-
-                // 2. Navigation Categories Card (iOS Settings Pattern from code.html)
-                item {
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 20.dp)
                             .clip(RoundedCornerShape(18.dp))
                             .background(AppleSurface)
                             .border(1.dp, AppleBorder, RoundedCornerShape(18.dp))
@@ -748,17 +587,9 @@ fun LibraryScreen(
                                 onClick = { selectedCategory = LibraryCategory.PLAYLISTS }
                             )
                             CategoryRow(
-                                icon = Icons.Default.Mic,
-                                title = "Artisti",
-                                count = artistsList.size.toString(),
-                                isSelected = selectedCategory == LibraryCategory.ARTISTS,
-                                showDivider = true,
-                                onClick = { selectedCategory = LibraryCategory.ARTISTS }
-                            )
-                            CategoryRow(
                                 icon = Icons.Default.Album,
                                 title = "Album",
-                                count = effectiveAlbums.size.toString(),
+                                count = albumsList.size.toString(),
                                 isSelected = selectedCategory == LibraryCategory.ALBUMS,
                                 showDivider = true,
                                 onClick = { selectedCategory = LibraryCategory.ALBUMS }
@@ -774,7 +605,7 @@ fun LibraryScreen(
                             CategoryRow(
                                 icon = Icons.Default.Favorite,
                                 title = "Preferiti",
-                                count = favoriteTracks.size.toString(),
+                                count = realFavorites.size.toString(),
                                 isSelected = selectedCategory == LibraryCategory.FAVORITES,
                                 showDivider = false,
                                 onClick = { selectedCategory = LibraryCategory.FAVORITES }
@@ -783,43 +614,58 @@ fun LibraryScreen(
                     }
                 }
 
-                // 3. Sub-header & Controls
+                // --- SUB-HEADER: TITLE, SORT, AND GRID/LIST TOGGLE CONTROLS ---
                 item {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 12.dp),
+                            .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = when (selectedCategory) {
-                                    LibraryCategory.ALBUMS -> "Tutti gli Album"
-                                    LibraryCategory.TRACKS -> "Tutti i Brani"
-                                    LibraryCategory.PLAYLISTS -> "Le tue Playlist"
-                                    LibraryCategory.ARTISTS -> "Tutti gli Artisti"
-                                    LibraryCategory.FAVORITES -> "Brani Preferiti"
-                                },
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = (-0.4).sp
-                            )
-                            Text(
-                                text = "sincronizzati",
-                                color = AppleTextMuted,
-                                fontSize = 13.sp
-                            )
-                        }
+                        Text(
+                            text = when (selectedCategory) {
+                                LibraryCategory.ALBUMS -> "Tutti gli Album"
+                                LibraryCategory.TRACKS -> "Tutti i Brani"
+                                LibraryCategory.PLAYLISTS -> "Le tue Playlist"
+                                LibraryCategory.FAVORITES -> "Brani Preferiti"
+                            },
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.4).sp
+                        )
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            if (selectedCategory == LibraryCategory.PLAYLISTS) {
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Color(0x14FFFFFF))
+                                        .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(16.dp))
+                                        .clickable { showCreatePlaylistDialog = true }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Nuova",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
                             // Sort Pill Menu
                             Box {
                                 Row(
@@ -895,69 +741,51 @@ fun LibraryScreen(
                     }
                 }
 
-                // 4. Content Area Based on Selected Category and View Mode
+                // --- CONTENT AREA (FUNCTIONAL GRID & LIST VIEWS FOR ALL CATEGORIES) ---
                 when (selectedCategory) {
                     LibraryCategory.ALBUMS -> {
                         if (displayedAlbums.isEmpty()) {
-                            item {
-                                EmptyPlaceholder("Nessun album trovato")
-                            }
+                            item { EmptyPlaceholder("Nessun album trovato") }
                         } else if (isGridView) {
                             itemsIndexed(displayedAlbums.chunked(2)) { _, pair ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                        .padding(horizontal = 20.dp, vertical = 6.dp),
                                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
+                                    val alb0 = pair[0]
+                                    val trks0 = getTracksForAlbum(alb0)
                                     AlbumCard(
-                                        album = pair[0],
-                                        isPlaying = playbackState.currentTrack?.albumId == pair[0].id && playbackState.isPlaying,
-                                        qualityBadge = getQualityBadge(pair[0]),
+                                        album = alb0,
+                                        isPlaying = playbackState.currentTrack?.let { trk ->
+                                            trk.album?.equals(alb0.name, ignoreCase = true) == true
+                                        } == true && playbackState.isPlaying,
                                         onClick = {
-                                            selectedAlbum = pair[0]
-                                            isAlbumTracksLoading = true
-                                            scope.launch {
-                                                client.getAlbumTracks(pair[0].id).onSuccess {
-                                                    albumTracks = it
-                                                    isAlbumTracksLoading = false
-                                                }
-                                            }
+                                            selectedAlbum = alb0
                                         },
                                         onQuickPlay = {
-                                            scope.launch {
-                                                client.getAlbumTracks(pair[0].id).onSuccess { list ->
-                                                    if (list.isNotEmpty()) {
-                                                        controller.playQueue(list, 0, kbps)
-                                                    }
-                                                }
+                                            if (trks0.isNotEmpty()) {
+                                                controller.playQueue(trks0, 0, kbps)
                                             }
                                         },
                                         modifier = Modifier.weight(1f)
                                     )
 
                                     if (pair.size > 1) {
+                                        val alb1 = pair[1]
+                                        val trks1 = getTracksForAlbum(alb1)
                                         AlbumCard(
-                                            album = pair[1],
-                                            isPlaying = playbackState.currentTrack?.albumId == pair[1].id && playbackState.isPlaying,
-                                            qualityBadge = getQualityBadge(pair[1]),
+                                            album = alb1,
+                                            isPlaying = playbackState.currentTrack?.let { trk ->
+                                                trk.album?.equals(alb1.name, ignoreCase = true) == true
+                                            } == true && playbackState.isPlaying,
                                             onClick = {
-                                                selectedAlbum = pair[1]
-                                                isAlbumTracksLoading = true
-                                                scope.launch {
-                                                    client.getAlbumTracks(pair[1].id).onSuccess {
-                                                        albumTracks = it
-                                                        isAlbumTracksLoading = false
-                                                    }
-                                                }
+                                                selectedAlbum = alb1
                                             },
                                             onQuickPlay = {
-                                                scope.launch {
-                                                    client.getAlbumTracks(pair[1].id).onSuccess { list ->
-                                                        if (list.isNotEmpty()) {
-                                                            controller.playQueue(list, 0, kbps)
-                                                        }
-                                                    }
+                                                if (trks1.isNotEmpty()) {
+                                                    controller.playQueue(trks1, 0, kbps)
                                                 }
                                             },
                                             modifier = Modifier.weight(1f)
@@ -968,22 +796,14 @@ fun LibraryScreen(
                                 }
                             }
                         } else {
-                            // Albums in list format
+                            // Albums List View
                             itemsIndexed(displayedAlbums) { _, alb ->
+                                val albTracks = getTracksForAlbum(alb)
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
-                                            selectedAlbum = alb
-                                            isAlbumTracksLoading = true
-                                            scope.launch {
-                                                client.getAlbumTracks(alb.id).onSuccess {
-                                                    albumTracks = it
-                                                    isAlbumTracksLoading = false
-                                                }
-                                            }
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        .clickable { selectedAlbum = alb }
+                                        .padding(horizontal = 20.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     AsyncImage(
@@ -1010,7 +830,7 @@ fun LibraryScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = alb.artistName,
+                                            text = "${alb.artistName} • ${albTracks.size} brani",
                                             color = AppleTextMuted,
                                             fontSize = 13.sp,
                                             maxLines = 1,
@@ -1018,17 +838,14 @@ fun LibraryScreen(
                                         )
                                     }
 
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0x14FFFFFF))
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    ) {
-                                        Text(
-                                            text = getQualityBadge(alb),
-                                            color = Color.White,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
+                                    IconButton(onClick = {
+                                        if (albTracks.isNotEmpty()) controller.playQueue(albTracks, 0, kbps)
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Riproduci",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 }
@@ -1038,8 +855,41 @@ fun LibraryScreen(
 
                     LibraryCategory.TRACKS -> {
                         if (displayedTracks.isEmpty()) {
-                            item {
-                                EmptyPlaceholder("Nessun brano trovato")
+                            item { EmptyPlaceholder("Nessun brano trovato") }
+                        } else if (isGridView) {
+                            itemsIndexed(displayedTracks.chunked(2)) { _, pair ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    val trk0 = pair[0]
+                                    TrackGridCard(
+                                        track = trk0,
+                                        isPlaying = playbackState.currentTrack?.id == trk0.id && playbackState.isPlaying,
+                                        onPlay = {
+                                            val idx = displayedTracks.indexOf(trk0)
+                                            controller.playQueue(displayedTracks, idx.coerceAtLeast(0), kbps)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    if (pair.size > 1) {
+                                        val trk1 = pair[1]
+                                        TrackGridCard(
+                                            track = trk1,
+                                            isPlaying = playbackState.currentTrack?.id == trk1.id && playbackState.isPlaying,
+                                            onPlay = {
+                                                val idx = displayedTracks.indexOf(trk1)
+                                                controller.playQueue(displayedTracks, idx.coerceAtLeast(0), kbps)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    } else {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
                             }
                         } else {
                             itemsIndexed(displayedTracks) { index, trk ->
@@ -1049,6 +899,7 @@ fun LibraryScreen(
                                     index = index + 1,
                                     isPlaying = isPlayingNow,
                                     onPlay = { controller.playQueue(displayedTracks, index, kbps) },
+                                    onToggleFavorite = { toggleFavorite(trk) },
                                     onAddToPlaylist = { trackToAddToPlaylist = trk }
                                 )
                             }
@@ -1080,7 +931,69 @@ fun LibraryScreen(
                                     }
                                 }
                             }
+                        } else if (isGridView) {
+                            itemsIndexed(displayedPlaylists.chunked(2)) { _, pair ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    val pl0 = pair[0]
+                                    PlaylistGridCard(
+                                        playlist = pl0,
+                                        onClick = {
+                                            selectedPlaylist = pl0
+                                            playlistTracks = emptyList()
+                                            isPlaylistTracksLoading = true
+                                            scope.launch {
+                                                client.getPlaylistTracks(pl0.id).onSuccess {
+                                                    playlistTracks = it
+                                                    isPlaylistTracksLoading = false
+                                                }
+                                            }
+                                        },
+                                        onQuickPlay = {
+                                            scope.launch {
+                                                client.getPlaylistTracks(pl0.id).onSuccess { list ->
+                                                    if (list.isNotEmpty()) controller.playQueue(list, 0, kbps)
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    if (pair.size > 1) {
+                                        val pl1 = pair[1]
+                                        PlaylistGridCard(
+                                            playlist = pl1,
+                                            onClick = {
+                                                selectedPlaylist = pl1
+                                                playlistTracks = emptyList()
+                                                isPlaylistTracksLoading = true
+                                                scope.launch {
+                                                    client.getPlaylistTracks(pl1.id).onSuccess {
+                                                        playlistTracks = it
+                                                        isPlaylistTracksLoading = false
+                                                    }
+                                                }
+                                            },
+                                            onQuickPlay = {
+                                                scope.launch {
+                                                    client.getPlaylistTracks(pl1.id).onSuccess { list ->
+                                                        if (list.isNotEmpty()) controller.playQueue(list, 0, kbps)
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    } else {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
                         } else {
+                            // Playlists List View with Real Server Image
                             itemsIndexed(displayedPlaylists) { _, pl ->
                                 Row(
                                     modifier = Modifier
@@ -1096,18 +1009,23 @@ fun LibraryScreen(
                                                 }
                                             }
                                         }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                        .padding(horizontal = 20.dp, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(52.dp)
+                                            .size(54.dp)
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(AppleSurface)
                                             .border(1.dp, AppleBorder, RoundedCornerShape(10.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(Icons.Default.QueueMusic, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                                        AsyncImage(
+                                            model = client.getArtworkUrl(pl.id, maxWidth = 200),
+                                            contentDescription = pl.name,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
                                     }
 
                                     Spacer(modifier = Modifier.width(14.dp))
@@ -1140,68 +1058,43 @@ fun LibraryScreen(
                         }
                     }
 
-                    LibraryCategory.ARTISTS -> {
-                        if (displayedArtists.isEmpty()) {
-                            item {
-                                EmptyPlaceholder("Nessun artista trovato")
-                            }
-                        } else {
-                            itemsIndexed(displayedArtists) { _, art ->
-                                val artistTrackCount = tracks.count { it.artistName == art }
+                    LibraryCategory.FAVORITES -> {
+                        if (displayedFavorites.isEmpty()) {
+                            item { EmptyPlaceholder("Nessun brano preferito su Jellyfin") }
+                        } else if (isGridView) {
+                            itemsIndexed(displayedFavorites.chunked(2)) { _, pair ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { selectedArtist = art }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(44.dp)
-                                                .clip(CircleShape)
-                                                .background(AppleSurface)
-                                                .border(1.dp, AppleBorder, CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(Icons.Default.Mic, contentDescription = null, tint = AppleTextMuted, modifier = Modifier.size(20.dp))
-                                        }
-
-                                        Column {
-                                            Text(
-                                                text = art,
-                                                color = Color.White,
-                                                fontSize = 15.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = "$artistTrackCount brani",
-                                                color = AppleTextMuted,
-                                                fontSize = 12.sp
-                                            )
-                                        }
-                                    }
-
-                                    Icon(
-                                        imageVector = Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        tint = AppleTextMuted,
-                                        modifier = Modifier.size(18.dp)
+                                    val trk0 = pair[0]
+                                    TrackGridCard(
+                                        track = trk0,
+                                        isPlaying = playbackState.currentTrack?.id == trk0.id && playbackState.isPlaying,
+                                        onPlay = {
+                                            val idx = displayedFavorites.indexOf(trk0)
+                                            controller.playQueue(displayedFavorites, idx.coerceAtLeast(0), kbps)
+                                        },
+                                        modifier = Modifier.weight(1f)
                                     )
-                                }
-                            }
-                        }
-                    }
 
-                    LibraryCategory.FAVORITES -> {
-                        if (displayedFavorites.isEmpty()) {
-                            item {
-                                EmptyPlaceholder("Nessun brano preferito")
+                                    if (pair.size > 1) {
+                                        val trk1 = pair[1]
+                                        TrackGridCard(
+                                            track = trk1,
+                                            isPlaying = playbackState.currentTrack?.id == trk1.id && playbackState.isPlaying,
+                                            onPlay = {
+                                                val idx = displayedFavorites.indexOf(trk1)
+                                                controller.playQueue(displayedFavorites, idx.coerceAtLeast(0), kbps)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    } else {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
                             }
                         } else {
                             itemsIndexed(displayedFavorites) { index, trk ->
@@ -1211,6 +1104,7 @@ fun LibraryScreen(
                                     index = index + 1,
                                     isPlaying = isPlayingNow,
                                     onPlay = { controller.playQueue(displayedFavorites, index, kbps) },
+                                    onToggleFavorite = { toggleFavorite(trk) },
                                     onAddToPlaylist = { trackToAddToPlaylist = trk }
                                 )
                             }
@@ -1266,7 +1160,7 @@ fun LibraryScreen(
 }
 
 /**
- * Grouped category row matching iOS Settings pattern in code.html.
+ * Grouped category row matching iOS Settings pattern.
  */
 @Composable
 private fun CategoryRow(
@@ -1356,13 +1250,12 @@ private fun CategoryRow(
 }
 
 /**
- * 2-Column Album Card matching code.html with squircle border, quality badge and quick play button.
+ * 2-Column Album Card with squircle border and quick play button (NO quality badges).
  */
 @Composable
 private fun AlbumCard(
     album: JellyfinItem,
     isPlaying: Boolean,
-    qualityBadge: String,
     onClick: () -> Unit,
     onQuickPlay: () -> Unit,
     modifier: Modifier = Modifier
@@ -1387,25 +1280,6 @@ private fun AlbumCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-
-            // Audio Quality Micro-Badge (from code.html)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.Black.copy(alpha = 0.78f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(4.dp))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = qualityBadge,
-                    color = Color.White,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
-                )
-            }
 
             // Quick Play Button Overlay
             Box(
@@ -1453,7 +1327,153 @@ private fun AlbumCard(
 }
 
 /**
- * Track Row item in list view.
+ * 2-Column Track Card for Grid view (NO quality badges).
+ */
+@Composable
+private fun TrackGridCard(
+    track: JellyfinItem,
+    isPlaying: Boolean,
+    onPlay: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val client = JellyMusicApp.instance.jellyfinClient
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onPlay() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppleSurface)
+                .border(1.dp, AppleBorder, RoundedCornerShape(14.dp))
+        ) {
+            AsyncImage(
+                model = client.getArtworkUrl(track.id, maxWidth = 300),
+                contentDescription = track.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable { onPlay() },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isPlaying) {
+                    AnimatedEqualizer()
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Riproduci",
+                        tint = Color.Black,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = track.name,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = track.artistName,
+            color = AppleTextMuted,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * 2-Column Playlist Card with real Jellyfin artwork.
+ */
+@Composable
+private fun PlaylistGridCard(
+    playlist: JellyfinItem,
+    onClick: () -> Unit,
+    onQuickPlay: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val client = JellyMusicApp.instance.jellyfinClient
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppleSurface)
+                .border(1.dp, AppleBorder, RoundedCornerShape(14.dp))
+        ) {
+            AsyncImage(
+                model = client.getArtworkUrl(playlist.id, maxWidth = 300),
+                contentDescription = playlist.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable { onQuickPlay() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Riproduci",
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = playlist.name,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = "Playlist Jellyfin",
+            color = AppleTextMuted,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Track Row item in list view with favorite toggle button and playlist add.
  */
 @Composable
 private fun TrackListItem(
@@ -1461,6 +1481,7 @@ private fun TrackListItem(
     index: Int,
     isPlaying: Boolean,
     onPlay: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit
 ) {
     val client = JellyMusicApp.instance.jellyfinClient
@@ -1468,7 +1489,7 @@ private fun TrackListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onPlay() }
-            .padding(horizontal = 16.dp, vertical = 7.dp),
+            .padding(horizontal = 20.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -1494,19 +1515,16 @@ private fun TrackListItem(
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "${track.artistName} • ${track.album ?: "Singolo"}",
-                    color = AppleTextMuted,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-            }
+            Text(
+                text = "${track.artistName} • ${track.album ?: "Singolo"}",
+                color = AppleTextMuted,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (isPlaying) {
@@ -1519,7 +1537,20 @@ private fun TrackListItem(
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Jellyfin Sync Favorite Heart
+            IconButton(
+                onClick = { onToggleFavorite() },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Preferito",
+                    tint = if (track.isFavorite) Color.White else AppleTextMuted.copy(alpha = 0.6f),
+                    modifier = Modifier.size(19.dp)
+                )
+            }
 
             IconButton(
                 onClick = { onAddToPlaylist() },
@@ -1528,8 +1559,8 @@ private fun TrackListItem(
                 Icon(
                     imageVector = Icons.Default.PlaylistAdd,
                     contentDescription = "Aggiungi a playlist",
-                    tint = AppleTextMuted.copy(alpha = 0.7f),
-                    modifier = Modifier.size(18.dp)
+                    tint = AppleTextMuted.copy(alpha = 0.6f),
+                    modifier = Modifier.size(19.dp)
                 )
             }
         }
@@ -1548,18 +1579,6 @@ private fun EmptyPlaceholder(message: String) {
     }
 }
 
-private fun getQualityBadge(item: JellyfinItem): String {
-    val container = item.container?.lowercase() ?: item.mediaSources?.firstOrNull()?.container?.lowercase()
-    val bitrate = item.mediaSources?.firstOrNull()?.bitrate ?: 0
-    return when {
-        container == "flac" -> "FLAC 96kHz"
-        container == "alac" -> "Hi-Res Lossless"
-        bitrate >= 500_000 -> "Direct Stream"
-        bitrate >= 320_000 -> "Hi-Res 320k"
-        else -> "Lossless"
-    }
-}
-
 private fun sortTracks(list: List<JellyfinItem>, sort: TrackSortOption): List<JellyfinItem> {
     return when (sort) {
         TrackSortOption.DATE_ADDED_DESC -> {
@@ -1573,6 +1592,30 @@ private fun sortTracks(list: List<JellyfinItem>, sort: TrackSortOption): List<Je
         TrackSortOption.TITLE_ASC -> list.sortedBy { it.name.lowercase() }
         TrackSortOption.TITLE_DESC -> list.sortedByDescending { it.name.lowercase() }
         TrackSortOption.ARTIST_ASC -> list.sortedBy { it.artistName.lowercase() }
+    }
+}
+
+private fun sortAlbums(list: List<JellyfinItem>, sort: TrackSortOption): List<JellyfinItem> {
+    return when (sort) {
+        TrackSortOption.DATE_ADDED_DESC -> {
+            if (list.any { !it.dateCreated.isNullOrEmpty() }) list.sortedByDescending { it.dateCreated }
+            else list
+        }
+        TrackSortOption.DATE_ADDED_ASC -> {
+            if (list.any { !it.dateCreated.isNullOrEmpty() }) list.sortedBy { it.dateCreated }
+            else list
+        }
+        TrackSortOption.TITLE_ASC -> list.sortedBy { it.name.lowercase() }
+        TrackSortOption.TITLE_DESC -> list.sortedByDescending { it.name.lowercase() }
+        TrackSortOption.ARTIST_ASC -> list.sortedBy { it.artistName.lowercase() }
+    }
+}
+
+private fun sortPlaylists(list: List<JellyfinItem>, sort: TrackSortOption): List<JellyfinItem> {
+    return when (sort) {
+        TrackSortOption.TITLE_ASC -> list.sortedBy { it.name.lowercase() }
+        TrackSortOption.TITLE_DESC -> list.sortedByDescending { it.name.lowercase() }
+        else -> list
     }
 }
 

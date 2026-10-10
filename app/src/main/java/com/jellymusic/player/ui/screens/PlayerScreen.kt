@@ -202,8 +202,8 @@ fun PlayerScreen(
         }
     }
 
-    // Heart like state with bounce/pop animation
-    var isLiked by remember { mutableStateOf(false) }
+    // Heart like state with bounce/pop animation synced with Jellyfin
+    var isLiked by remember(track.id) { mutableStateOf(track.isFavorite) }
     val heartScale = remember { Animatable(1f) }
 
     // Scrubber drag state with smooth height expansion
@@ -721,10 +721,16 @@ fun PlayerScreen(
         if (heartAlpha > 0.001f) {
             IconButton(
                 onClick = {
-                    isLiked = !isLiked
+                    val targetLiked = !isLiked
+                    isLiked = targetLiked
                     coroutineScope.launch {
                         heartScale.animateTo(1.22f, tween(110, easing = FastOutSlowInEasing))
                         heartScale.animateTo(1.0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                    }
+                    val curId = track.id
+                    coroutineScope.launch {
+                        client.setFavorite(curId, targetLiked)
+                        controller.updateTrackFavorite(curId, targetLiked)
                     }
                 },
                 enabled = p > 0.6f,

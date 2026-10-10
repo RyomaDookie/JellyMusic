@@ -82,7 +82,7 @@ class JellyfinClient(
         sortOrder: String = "Descending"
     ): Result<List<JellyfinItem>> = withContext(Dispatchers.IO) {
         try {
-            var url = "$baseUrl/Users/$userId/Items?IncludeItemTypes=Audio&Recursive=true&SortBy=$sortBy&SortOrder=$sortOrder&StartIndex=$startIndex&Limit=$limit&Fields=DateCreated"
+            var url = "$baseUrl/Users/$userId/Items?IncludeItemTypes=Audio&Recursive=true&SortBy=$sortBy&SortOrder=$sortOrder&StartIndex=$startIndex&Limit=$limit&Fields=DateCreated,UserData,MediaSources"
             if (searchTerm.isNotBlank()) {
                 val encoded = URLEncoder.encode(searchTerm.trim(), "UTF-8")
                 url += "&SearchTerm=$encoded"
@@ -297,6 +297,52 @@ class JellyfinClient(
                 .url(url)
                 .addHeader("X-Emby-Authorization", authHeader())
                 .post(body)
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful || response.code in 200..299) {
+                Result.success(Unit)
+            } else {
+                Result.failure(IOException("Server error HTTP ${response.code}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFavorites(): Result<List<JellyfinItem>> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/Users/$userId/Items?IncludeItemTypes=Audio&Recursive=true&Filters=IsFavorite&SortBy=DateCreated&SortOrder=Descending&Fields=DateCreated,UserData,MediaSources"
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("X-Emby-Authorization", authHeader())
+                .cacheControl(CacheControl.FORCE_NETWORK)
+                .get()
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            val responseBody = response.body?.string().orEmpty()
+
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(IOException("Failed to fetch favorites: ${response.code}"))
+            }
+
+            val itemsResp = json.decodeFromString(ItemsResponse.serializer(), responseBody)
+            Result.success(itemsResp.items)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun setFavorite(itemId: String, isFavorite: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val endpoint = if (isFavorite) "POST" else "DELETE"
+            val url = "$baseUrl/Users/$userId/FavoriteItems/$itemId"
+            val body = "".toRequestBody("application/json".toMediaType())
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("X-Emby-Authorization", authHeader())
+                .method(endpoint, if (isFavorite) body else null)
                 .build()
 
             val response = httpClient.newCall(request).execute()

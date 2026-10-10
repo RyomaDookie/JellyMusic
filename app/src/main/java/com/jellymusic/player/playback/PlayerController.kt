@@ -9,6 +9,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.jellymusic.player.data.JellyfinClient
 import com.jellymusic.player.data.JellyfinItem
+import com.jellymusic.player.data.UserItemDataDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,6 +50,21 @@ class PlayerController(
 
     fun updateCachedTracks(tracks: List<JellyfinItem>) {
         cachedTracks = tracks
+    }
+
+    fun updateTrackFavorite(trackId: String, isFavorite: Boolean) {
+        val updated = cachedTracks.map {
+            if (it.id == trackId) {
+                it.copy(userData = (it.userData ?: UserItemDataDto()).copy(isFavorite = isFavorite))
+            } else it
+        }
+        cachedTracks = updated
+        val cur = _state.value.currentTrack
+        if (cur?.id == trackId) {
+            _state.value = _state.value.copy(
+                currentTrack = cur.copy(userData = (cur.userData ?: UserItemDataDto()).copy(isFavorite = isFavorite))
+            )
+        }
     }
 
     fun playTrackById(trackId: String) {

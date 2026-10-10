@@ -199,7 +199,7 @@ fun MainNavigationHost(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = if (playbackState.currentTrack != null) 144.dp else 72.dp)
+                    .padding(bottom = 72.dp)
             ) {
                 when (activeTab) {
                     0 -> HomeScreen(
