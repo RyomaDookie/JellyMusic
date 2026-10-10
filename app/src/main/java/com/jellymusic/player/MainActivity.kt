@@ -7,16 +7,23 @@ import androidx.activity.compose.BackHandler
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -201,26 +208,55 @@ fun MainNavigationHost(
                     .fillMaxSize()
                     .padding(bottom = 72.dp)
             ) {
-                when (activeTab) {
-                    0 -> HomeScreen(
-                        customizations = customizations,
-                        playbackState = playbackState,
-                        onOpenPlayer = expandPlayer,
-                        onOpenSettings = { activeTab = 2 },
-                        onNavigateToTab = { activeTab = it },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    2 -> SettingsScreen(
-                        customizations = customizations,
-                        onBack = { activeTab = 0 },
-                        onLogout = { activeTab = 0 }
-                    )
-                    else -> LibraryScreen(
-                        customizations = customizations,
-                        playbackState = playbackState,
-                        onOpenSettings = { activeTab = 2 },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                AnimatedContent(
+                    targetState = activeTab,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally(
+                                initialOffsetX = { (it * 0.25f).toInt() },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(260))).togetherWith(
+                                slideOutHorizontally(
+                                    targetOffsetX = { (-it * 0.25f).toInt() },
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                ) + fadeOut(animationSpec = tween(200))
+                            )
+                        } else {
+                            (slideInHorizontally(
+                                initialOffsetX = { (-it * 0.25f).toInt() },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(260))).togetherWith(
+                                slideOutHorizontally(
+                                    targetOffsetX = { (it * 0.25f).toInt() },
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                ) + fadeOut(animationSpec = tween(200))
+                            )
+                        }
+                    },
+                    label = "tabTransition",
+                    modifier = Modifier.fillMaxSize()
+                ) { tab ->
+                    when (tab) {
+                        0 -> HomeScreen(
+                            customizations = customizations,
+                            playbackState = playbackState,
+                            onOpenPlayer = expandPlayer,
+                            onOpenSettings = { activeTab = 2 },
+                            onNavigateToTab = { activeTab = it },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        2 -> SettingsScreen(
+                            customizations = customizations,
+                            onBack = { activeTab = 0 },
+                            onLogout = { activeTab = 0 }
+                        )
+                        else -> LibraryScreen(
+                            customizations = customizations,
+                            playbackState = playbackState,
+                            onOpenSettings = { activeTab = 2 },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -280,8 +316,21 @@ fun MainNavigationHost(
             }
         }
 
-        // Unified Morphing Player Container (Transition.dc.html 100% faithful)
-        if (playbackState.currentTrack != null) {
+        // Unified Morphing Player Container (Smooth animated entrance when mini player first appears)
+        AnimatedVisibility(
+            visible = playbackState.currentTrack != null,
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = 350f
+                )
+            ) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(200))
+        ) {
             PlayerScreen(
                 playbackState = playbackState,
                 customizations = customizations,

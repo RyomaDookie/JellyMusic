@@ -130,6 +130,15 @@ fun HomeScreen(
     val favoriteTracks = remember(tracks) { tracks.filter { it.isFavorite } }
     val displayFeedTracks = remember(tracks) { tracks.take(20) }
 
+    // Truly randomized Daily Mix (seeded by day so it's fresh each day, not ordered by date added)
+    val dailyMixTracks = remember(tracks) {
+        if (tracks.isEmpty()) emptyList()
+        else {
+            val daySeed = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+            tracks.shuffled(kotlin.random.Random(daySeed))
+        }
+    }
+
     val dateText = remember {
         SimpleDateFormat("EEEE d MMMM", Locale.ITALIAN).format(Date())
             .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ITALIAN) else it.toString() }
@@ -265,7 +274,7 @@ fun HomeScreen(
                 ) {
                     AppleIn("mix", 3, seen, Modifier.weight(1f)) {
                         val src = remember { MutableInteractionSource() }
-                        val cover = tracks.firstOrNull()
+                        val cover = dailyMixTracks.firstOrNull() ?: tracks.firstOrNull()
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -275,7 +284,8 @@ fun HomeScreen(
                                 .background(Color(0xFF141418))
                                 .border(1.dp, AppleCardBorder, RoundedCornerShape(20.dp))
                                 .clickable(interactionSource = src, indication = null) {
-                                    if (tracks.isNotEmpty()) controller.playQueue(tracks.shuffled(), 0, kbps)
+                                    if (dailyMixTracks.isNotEmpty()) controller.playQueue(dailyMixTracks, 0, kbps)
+                                    else if (tracks.isNotEmpty()) controller.playQueue(tracks.shuffled(), 0, kbps)
                                 }
                         ) {
                             if (cover != null) {
@@ -305,7 +315,9 @@ fun HomeScreen(
                                 )
                                 Spacer(Modifier.height(3.dp))
                                 Text(
-                                    text = if (tracks.isNotEmpty()) tracks.take(3).joinToString(", ") { it.artistName } else "I tuoi brani preferiti",
+                                    text = if (dailyMixTracks.isNotEmpty()) {
+                                        dailyMixTracks.take(4).map { it.artistName }.filter { it.isNotBlank() }.distinct().take(3).joinToString(", ")
+                                    } else "Brani casuali della libreria",
                                     color = AppleMuted,
                                     fontSize = 11.sp,
                                     maxLines = 2,
@@ -403,12 +415,12 @@ fun HomeScreen(
                     }
                 }
                 item {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        itemsIndexed(recentTracks, key = { _, t -> "recent_${t.id}" }) { i, t ->
-                            AppleIn("recent_${t.id}", 6 + i.coerceAtMost(5), seen) {
+                    AppleIn("recentCarousel", 6, seen) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            itemsIndexed(recentTracks, key = { _, t -> "recent_${t.id}" }) { i, t ->
                                 AppleTrackCard(
                                     track = t,
                                     isCurrent = playbackState.currentTrack?.id == t.id,
