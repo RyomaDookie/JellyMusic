@@ -132,5 +132,27 @@ data class LyricLineDto(
         get() = words.isNotEmpty() || spans.isNotEmpty()
     val isBgAbove: Boolean
         get() = backgroundVoice != null && backgroundVoice.startMs < startMs
+    val earliestStartMs: Long
+        get() {
+            val mainStart = if (startTicks != null) startMs else null
+            val bgStart = backgroundVoice?.startMs
+            return when {
+                mainStart != null && bgStart != null -> minOf(mainStart, bgStart)
+                mainStart != null -> mainStart
+                bgStart != null -> bgStart
+                else -> 0L
+            }
+        }
+    val latestEndMs: Long
+        get() {
+            val mainEnd = if (endTicks != null) endMs else null
+            val bgEnd = backgroundVoice?.endMs
+            return when {
+                mainEnd != null && bgEnd != null -> maxOf(mainEnd, bgEnd)
+                mainEnd != null -> mainEnd
+                bgEnd != null -> bgEnd
+                else -> earliestStartMs + 3000L
+            }
+        }
 }
 

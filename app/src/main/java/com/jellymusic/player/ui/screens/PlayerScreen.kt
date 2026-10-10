@@ -1861,12 +1861,12 @@ private fun LyricsPanel(
         }
     }
 
-    val hasTimestamps = lyrics.any { it.startTicks != null }
+    val hasTimestamps = lyrics.any { it.startTicks != null || it.backgroundVoice != null }
     val activeIndex by remember(lyrics) {
         derivedStateOf {
             val pos = playTimeMs.longValue
             if (hasTimestamps) {
-                val found = lyrics.indexOfLast { it.startMs <= pos }
+                val found = lyrics.indexOfLast { it.earliestStartMs <= pos }
                 if (found >= 0) found else 0
             } else {
                 ((pos.toFloat() / durationMs.toFloat()) * lyrics.size)
@@ -1953,8 +1953,8 @@ private fun LyricsPanel(
                     playTimeMs = playTimeMs,
                     bezierEasing = bezierEasing,
                     onClick = {
-                        val seekTarget = if (line.startTicks != null) {
-                            line.startMs
+                        val seekTarget = if (line.startTicks != null || line.backgroundVoice != null) {
+                            line.earliestStartMs
                         } else {
                             (index.toFloat() / lyrics.size.toFloat() * durationMs).toLong()
                         }
@@ -2079,11 +2079,12 @@ private fun MainVoiceRow(
             }
         }
     } else {
+        val isMainSinging = !line.isBgAbove || playTimeMs.value >= line.startMs
         Text(
             text = line.text.replace(Regex("<[^>]*>"), "").trim(),
             fontSize = 26.sp,
-            fontWeight = if (isActiveLine) FontWeight.Bold else FontWeight.SemiBold,
-            color = if (isActiveLine) Color.White else Color.White.copy(alpha = 0.35f),
+            fontWeight = if (isActiveLine && isMainSinging) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (isActiveLine && isMainSinging) Color.White else Color.White.copy(alpha = 0.35f),
             lineHeight = 36.sp,
             letterSpacing = (-0.015).sp
         )

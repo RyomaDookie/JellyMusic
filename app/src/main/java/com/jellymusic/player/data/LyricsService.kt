@@ -263,6 +263,7 @@ class LyricsService(
                     ))
                 }
             }
+            lines.sortBy { it.earliestStartMs }
             return lines
         }
 
