@@ -218,6 +218,7 @@ fun MainNavigationHost(
                     else -> LibraryScreen(
                         customizations = customizations,
                         playbackState = playbackState,
+                        onOpenSettings = { activeTab = 2 },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
