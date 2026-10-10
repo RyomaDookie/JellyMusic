@@ -671,18 +671,6 @@ fun PlayerScreen(
                 }
             }
 
-        // Top Grab Handle (pill)
-        if (pillAlpha > 0.001f) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = 10.dp)
-                    .size(width = 36.dp, height = 5.dp)
-                    .graphicsLayer { alpha = pillAlpha }
-                    .clip(RoundedCornerShape(2.5.dp))
-                    .background(Color.White.copy(alpha = 0.35f))
-            )
-        }
 
         // Mini Player Progress Line: anchored to the bottom edge of the container while fading out
         if (miniLineAlpha > 0.001f) {
@@ -1497,8 +1485,8 @@ private fun PlaybackSpeedDialog(
                     indication = null
                 ) { /* Consume click inside */ }
         ) {
-            // Dark frosted blur backdrop layer inside the box (BEHIND the buttons, slider, and text)
-            val darkBaseAlpha = lerpFloat(0.22f, 0.94f, smoothT)
+            // Frosted blur backdrop layer inside the box (matching the small variant)
+            val darkBaseAlpha = lerpFloat(0.16f, 0.58f, smoothT)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1513,7 +1501,7 @@ private fun PlaybackSpeedDialog(
                             )
                         )
                     )
-                    .blur(20.dp)
+                    .blur(16.dp)
             )
 
             // Number & Tune Icon: expands and travels seamlessly from pill center to top of the minimal card

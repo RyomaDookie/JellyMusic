@@ -218,9 +218,26 @@ class PlayerController(
         player.play()
     }
 
+    fun play() {
+        val player = exoPlayer ?: return
+        if (player.playbackState == Player.STATE_ENDED || (player.duration > 0 && player.currentPosition >= player.duration - 500L)) {
+            player.seekTo(0L)
+            _state.value = _state.value.copy(currentPositionMs = 0L)
+        }
+        player.play()
+    }
+
     fun togglePlayPause() {
         val player = exoPlayer ?: return
-        if (player.isPlaying) player.pause() else player.play()
+        if (player.isPlaying) {
+            player.pause()
+        } else {
+            if (player.playbackState == Player.STATE_ENDED || (player.duration > 0 && player.currentPosition >= player.duration - 500L)) {
+                player.seekTo(0L)
+                _state.value = _state.value.copy(currentPositionMs = 0L)
+            }
+            player.play()
+        }
     }
 
     fun seekTo(positionMs: Long) {

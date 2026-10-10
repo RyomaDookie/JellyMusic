@@ -26,6 +26,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -310,30 +311,33 @@ fun MainNavigationHost(
             )
         }
 
-        // Bottom Navigation Bar (Transition.dc.html: navStyle with translateY(q(0, 0.6) * 80))
+        // Bottom Navigation Bar - Floating transparent glass bar
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(72.dp)
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .height(56.dp)
                 .graphicsLayer {
                     val p = animProgress.value.coerceIn(0f, 1f)
                     val qNav = if (p <= 0f) 0f else ((p - 0f) / 0.6f).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
                     translationY = qNav * 80.dp.toPx()
                 }
-                .background(Color(0xF50D0D11))
+                .shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(28.dp),
+                    ambientColor = Color.Black,
+                    spotColor = Color.Black
+                )
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color(0x3514141E))
+                .background(Color(0x18FFFFFF))
+                .border(1.dp, Color(0x30FFFFFF), RoundedCornerShape(28.dp))
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(Color(0x22FFFFFF))
-            )
-
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -393,7 +397,6 @@ private fun BottomNavItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val activeColor = Color(0xFFD926AA)
     val targetTint = if (isSelected) Color.White else Color(0xFF8B8A94)
     val animatedTint by androidx.compose.animation.animateColorAsState(
         targetValue = targetTint,
@@ -410,7 +413,7 @@ private fun BottomNavItem(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -419,25 +422,18 @@ private fun BottomNavItem(
             contentDescription = label,
             tint = animatedTint,
             modifier = Modifier
-                .size(23.dp)
+                .size(22.dp)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                 }
         )
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
             fontSize = 10.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = animatedTint
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Box(
-            modifier = Modifier
-                .size(width = if (isSelected) 12.dp else 0.dp, height = 2.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(if (isSelected) activeColor else Color.Transparent)
         )
     }
 }

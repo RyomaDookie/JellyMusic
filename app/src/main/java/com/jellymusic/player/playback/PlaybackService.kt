@@ -666,6 +666,14 @@ class PlaybackService : MediaLibraryService() {
                 }
             }
 
+            override fun play() {
+                if (playbackState == Player.STATE_ENDED || (duration > 0 && currentPosition >= duration - 500L)) {
+                    seekTo(0L)
+                    JellyMusicApp.instance.playerController.seekTo(0L)
+                }
+                super.play()
+            }
+
             override fun seekToNext() {
                 JellyMusicApp.instance.playerController.skipNext()
             }

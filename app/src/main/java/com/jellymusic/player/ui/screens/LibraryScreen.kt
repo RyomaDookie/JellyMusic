@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.outlined.Person
@@ -92,6 +93,7 @@ import com.jellymusic.player.JellyMusicApp
 import com.jellymusic.player.data.JellyfinItem
 import com.jellymusic.player.playback.PlaybackState
 import com.jellymusic.player.preferences.UserCustomizations
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val AppleBlack = Color(0xFF000000)
@@ -150,6 +152,7 @@ fun LibraryScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearchVisible by remember { mutableStateOf(false) }
+    var isRefreshingLibrary by remember { mutableStateOf(false) }
 
     var tracks by remember { mutableStateOf(controller.cachedTracks) }
     var playlists by remember { mutableStateOf(cachedPlaylists) }
@@ -323,6 +326,52 @@ fun LibraryScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Refresh Jellyfin library & reload local tracks after 7 seconds
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (isRefreshingLibrary) Color.White.copy(alpha = 0.2f) else Color(0x14FFFFFF))
+                                .clickable(enabled = !isRefreshingLibrary) {
+                                    isRefreshingLibrary = true
+                                    scope.launch {
+                                        // 1. Trigger server scan
+                                        try { client.refreshLibraryScan() } catch (_: Exception) {}
+                                        // 2. Wait 7 seconds before local refresh
+                                        delay(7000L)
+                                        // 3. Local refresh of audio tracks, playlists, favorites
+                                        client.getAudioTracks().onSuccess {
+                                            tracks = it
+                                            controller.updateCachedTracks(it)
+                                        }
+                                        client.getPlaylists().onSuccess {
+                                            playlists = it
+                                            cachedPlaylists = it
+                                        }
+                                        client.getFavorites().onSuccess {
+                                            favoritesList = it
+                                        }
+                                        isRefreshingLibrary = false
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isRefreshingLibrary) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(17.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Sincronizza libreria Jellyfin",
+                                    tint = AppleTextMuted,
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
+                        }
+
                         Box(
                             modifier = Modifier
                                 .size(36.dp)

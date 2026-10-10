@@ -3,8 +3,10 @@ package com.jellymusic.player.data
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -92,14 +94,14 @@ class LyricsService(
         return try {
             val query = if (artist.isNotBlank()) "$title $artist" else title
             val encQuery = URLEncoder.encode(query, "UTF-8")
-            val itunesUrl = "https://itunes.apple.com/search?term=$encQuery&entity=song&limit=1"
+            val itunesUrl = "https://itunes.apple.com/search?term=$encQuery&entity=song&limit=10"
             val itunesReq = Request.Builder().url(itunesUrl).get().build()
             val itunesResp = httpClient.newCall(itunesReq).execute()
             if (!itunesResp.isSuccessful) return null
             val itunesBody = itunesResp.body?.string().orEmpty()
             if (itunesBody.isBlank()) return null
 
-            val trackId = extractTrackIdFromItunes(itunesBody) ?: return null
+            val trackId = extractTrackIdFromItunes(itunesBody, title, artist) ?: return null
 
             val paxUrl = "https://lyrics.paxsenix.org/apple-music/lyrics?id=$trackId&ttml=true"
             val paxReq = Request.Builder().url(paxUrl).get().build()
@@ -120,9 +122,49 @@ class LyricsService(
         }
     }
 
-    private fun extractTrackIdFromItunes(itunesBody: String): Long? {
-        val match = Regex(""""trackId":\s*(\d+)""").find(itunesBody)
-        return match?.groupValues?.get(1)?.toLongOrNull()
+    private fun extractTrackIdFromItunes(itunesBody: String, expectedTitle: String, expectedArtist: String): Long? {
+        return try {
+            val root = json.parseToJsonElement(itunesBody).jsonObject
+            val results = root["results"]?.jsonArray ?: return null
+            val cleanExpTitle = normalizeForMatching(expectedTitle)
+            val cleanExpArtist = normalizeForMatching(expectedArtist)
+            if (cleanExpTitle.isBlank()) return null
+
+            var bestTrackId: Long? = null
+            var bestScore = 0
+
+            for (elem in results) {
+                val item = elem.jsonObject
+                val trackId = item["trackId"]?.jsonPrimitive?.longOrNull ?: continue
+                val trackName = item["trackName"]?.jsonPrimitive?.content.orEmpty()
+                val artistName = item["artistName"]?.jsonPrimitive?.content.orEmpty()
+
+                val cleanTrack = normalizeForMatching(trackName)
+                val cleanArtist = normalizeForMatching(artistName)
+
+                // Must match artist if provided
+                if (cleanExpArtist.isNotBlank()) {
+                    val artistMatches = cleanArtist.contains(cleanExpArtist) || cleanExpArtist.contains(cleanArtist)
+                    if (!artistMatches) continue
+                }
+
+                // Check title match
+                val score = when {
+                    cleanTrack == cleanExpTitle -> 100
+                    cleanTrack.startsWith(cleanExpTitle) || cleanExpTitle.startsWith(cleanTrack) -> 80
+                    cleanTrack.contains(cleanExpTitle) || cleanExpTitle.contains(cleanTrack) -> 60
+                    else -> 0
+                }
+
+                if (score > bestScore) {
+                    bestScore = score
+                    bestTrackId = trackId
+                }
+            }
+            if (bestScore >= 60) bestTrackId else null
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun tryLrcLib(title: String, artist: String): List<LyricLineDto>? {
@@ -133,30 +175,66 @@ class LyricsService(
             val url = "https://lrclib.net/api/get?track_name=$encSong&artist_name=$encArtist"
             val request = Request.Builder().url(url).get().build()
             val response = httpClient.newCall(request).execute()
-            if (!response.isSuccessful) return null
-            val body = response.body?.string().orEmpty()
-            if (body.isBlank()) return null
-
-            val root = json.parseToJsonElement(body).jsonObject
-            val synced = root["syncedLyrics"]?.jsonPrimitive?.content
-            if (!synced.isNullOrBlank()) {
-                val parsed = parseLrc(synced)
-                if (parsed.isNotEmpty()) return parsed
-            }
-            val plain = root["plainLyrics"]?.jsonPrimitive?.content
-            if (!plain.isNullOrBlank()) {
-                return plain.lines().filter { it.isNotBlank() }.map {
-                    LyricLineDto(text = it.trim(), startTicks = null)
+            if (response.isSuccessful) {
+                val body = response.body?.string().orEmpty()
+                if (body.isNotBlank()) {
+                    val root = json.parseToJsonElement(body).jsonObject
+                    val synced = root["syncedLyrics"]?.jsonPrimitive?.content
+                    if (!synced.isNullOrBlank()) {
+                        val parsed = parseLrc(synced)
+                        if (parsed.isNotEmpty()) return parsed
+                    }
+                    val plain = root["plainLyrics"]?.jsonPrimitive?.content
+                    if (!plain.isNullOrBlank()) {
+                        return plain.lines().filter { it.isNotBlank() }.map {
+                            LyricLineDto(text = it.trim(), startTicks = null)
+                        }
+                    }
                 }
             }
+
+            // Fallback search in LRCLIB if exact get failed
+            val query = if (artist.isNotBlank()) "$title $artist" else title
+            val encQuery = URLEncoder.encode(query, "UTF-8")
+            val searchUrl = "https://lrclib.net/api/search?q=$encQuery"
+            val searchReq = Request.Builder().url(searchUrl).get().build()
+            val searchResp = httpClient.newCall(searchReq).execute()
+            if (searchResp.isSuccessful) {
+                val searchBody = searchResp.body?.string().orEmpty()
+                if (searchBody.isNotBlank()) {
+                    val results = json.parseToJsonElement(searchBody).jsonArray
+                    val cleanExpTitle = normalizeForMatching(title)
+                    for (elem in results) {
+                        val item = elem.jsonObject
+                        val trackName = item["trackName"]?.jsonPrimitive?.content.orEmpty()
+                        val cleanTrack = normalizeForMatching(trackName)
+                        if (cleanTrack == cleanExpTitle || cleanTrack.contains(cleanExpTitle) || cleanExpTitle.contains(cleanTrack)) {
+                            val synced = item["syncedLyrics"]?.jsonPrimitive?.content
+                            if (!synced.isNullOrBlank()) {
+                                val parsed = parseLrc(synced)
+                                if (parsed.isNotEmpty()) return parsed
+                            }
+                        }
+                    }
+                }
+            }
+
             null
         } catch (_: Exception) {
             null
         }
     }
 
+    private fun normalizeForMatching(text: String): String {
+        return text.lowercase(java.util.Locale.US)
+            .replace(Regex("""[\(\[].*?[\)\]]"""), "")
+            .replace(Regex("""[^a-z0-9]"""), "")
+    }
+
     private fun sanitizeTitle(title: String): String {
         return title
+            .replace(Regex("""^\d{1,2}\.?\s*-\s*"""), "")
+            .replace(Regex("""^\d{1,2}\.\s*"""), "")
             .replace(Regex("""\s*[\(\[](feat\.|ft\.|with\b|remastered|deluxe|bonus|version|explicit|official|audio|video|edit)[^\)\]]*[\)\]]""", RegexOption.IGNORE_CASE), "")
             .replace(Regex("""\s*-\s*(feat\.|ft\.|remastered|deluxe|bonus|version|explicit|official).*""", RegexOption.IGNORE_CASE), "")
             .trim()
