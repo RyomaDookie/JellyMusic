@@ -1,0 +1,24 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+.kotlin/
+
+# Built application files
+*.apk
+*.aar
+*.aab
+
+# App build artifacts
+build/
+app/build/
+
+# OS and IDE cache
+Thumbs.db
+*.swp
+*~
