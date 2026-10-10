@@ -358,7 +358,7 @@
       "source_location": "L23"
     },
     {
-      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903",
+      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827",
       "label": "NestedScrollConnection",
       "_callable": true,
       "_callable_class": true,
@@ -368,10 +368,10 @@
       "file_type": "code",
       "norm_label": "nestedscrollconnection",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1903"
+      "source_location": "L1827"
     },
     {
-      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204",
+      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230",
       "label": "NestedScrollConnection",
       "_callable": true,
       "_callable_class": true,
@@ -381,7 +381,7 @@
       "file_type": "code",
       "norm_label": "nestedscrollconnection",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2204"
+      "source_location": "L2230"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_preferences_apppreferences_streamingquality",
@@ -1531,7 +1531,7 @@
       "file_type": "code",
       "norm_label": "formatms()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2333"
+      "source_location": "L2359"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lerpdp",
@@ -1567,7 +1567,7 @@
       "file_type": "code",
       "norm_label": "playbackspeeddialog()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1382"
+      "source_location": "L1404"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_playerscreen",
@@ -1591,7 +1591,7 @@
       "file_type": "code",
       "norm_label": "pressscale()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1773"
+      "source_location": "L1795"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_q",
@@ -1627,7 +1627,7 @@
       "file_type": "code",
       "norm_label": "speedscalebar()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1609"
+      "source_location": "L1631"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_backgroundvoicerow",
@@ -1639,7 +1639,7 @@
       "file_type": "code",
       "norm_label": "backgroundvoicerow()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2094"
+      "source_location": "L2120"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyriclineitem",
@@ -1651,7 +1651,7 @@
       "file_type": "code",
       "norm_label": "lyriclineitem()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1969"
+      "source_location": "L1995"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel",
@@ -1663,7 +1663,7 @@
       "file_type": "code",
       "norm_label": "lyricspanel()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1794"
+      "source_location": "L1816"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_mainvoicerow",
@@ -1675,7 +1675,7 @@
       "file_type": "code",
       "norm_label": "mainvoicerow()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2051"
+      "source_location": "L2077"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_pillbutton",
@@ -1687,7 +1687,7 @@
       "file_type": "code",
       "norm_label": "pillbutton()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1728"
+      "source_location": "L1750"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_syllableitem",
@@ -1699,7 +1699,7 @@
       "file_type": "code",
       "norm_label": "syllableitem()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2136"
+      "source_location": "L2162"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_mainactivity_bottomnavitem",
@@ -1894,7 +1894,7 @@
       "source_location": "L110"
     },
     {
-      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903_onpostscroll",
+      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827_onpostscroll",
       "label": ".onPostScroll()",
       "_callable": true,
       "_origin": "ast",
@@ -1903,7 +1903,7 @@
       "file_type": "code",
       "norm_label": ".onpostscroll()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1904"
+      "source_location": "L1828"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel",
@@ -1915,10 +1915,10 @@
       "file_type": "code",
       "norm_label": "queuepanel()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2194"
+      "source_location": "L2220"
     },
     {
-      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204_onpostscroll",
+      "id": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230_onpostscroll",
       "label": ".onPostScroll()",
       "_callable": true,
       "_origin": "ast",
@@ -1927,7 +1927,7 @@
       "file_type": "code",
       "norm_label": ".onpostscroll()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2205"
+      "source_location": "L2231"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_preferences_apppreferences_apppreferences_updatestreamingquality",
@@ -1963,7 +1963,7 @@
       "file_type": "code",
       "norm_label": "extractartworkpalette()",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2340"
+      "source_location": "L2366"
     },
     {
       "id": "app_src_main_java_com_jellymusic_player_playback_playbackservice_playbackservice_buildcustomlayout",
@@ -7582,7 +7582,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2094",
+      "source_location": "L2120",
       "weight": 1.0
     },
     {
@@ -7594,7 +7594,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2094",
+      "source_location": "L2120",
       "weight": 1.0
     },
     {
@@ -7606,7 +7606,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1969",
+      "source_location": "L1995",
       "weight": 1.0
     },
     {
@@ -7618,7 +7618,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1969",
+      "source_location": "L1995",
       "weight": 1.0
     },
     {
@@ -7630,7 +7630,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1794",
+      "source_location": "L1816",
       "weight": 1.0
     },
     {
@@ -7642,7 +7642,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2051",
+      "source_location": "L2077",
       "weight": 1.0
     },
     {
@@ -7654,7 +7654,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2051",
+      "source_location": "L2077",
       "weight": 1.0
     },
     {
@@ -7666,7 +7666,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1728",
+      "source_location": "L1750",
       "weight": 1.0
     },
     {
@@ -7678,7 +7678,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1382",
+      "source_location": "L1404",
       "weight": 1.0
     },
     {
@@ -7702,7 +7702,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1773",
+      "source_location": "L1795",
       "weight": 1.0
     },
     {
@@ -7714,7 +7714,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2194",
+      "source_location": "L2220",
       "weight": 1.0
     },
     {
@@ -7726,7 +7726,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1609",
+      "source_location": "L1631",
       "weight": 1.0
     },
     {
@@ -7738,7 +7738,7 @@
       "confidence_score": 1.0,
       "context": "attribute",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2136",
+      "source_location": "L2162",
       "weight": 1.0
     },
     {
@@ -9298,7 +9298,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2112",
+      "source_location": "L2138",
       "weight": 1.0
     },
     {
@@ -9310,7 +9310,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2025",
+      "source_location": "L2051",
       "weight": 1.0
     },
     {
@@ -9322,7 +9322,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2033",
+      "source_location": "L2059",
       "weight": 1.0
     },
     {
@@ -9334,7 +9334,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1948",
+      "source_location": "L1974",
       "weight": 1.0
     },
     {
@@ -9346,7 +9346,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2069",
+      "source_location": "L2095",
       "weight": 1.0
     },
     {
@@ -9358,7 +9358,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1752",
+      "source_location": "L1774",
       "weight": 1.0
     },
     {
@@ -9370,7 +9370,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1436",
+      "source_location": "L1458",
       "weight": 1.0
     },
     {
@@ -9382,7 +9382,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1445",
+      "source_location": "L1467",
       "weight": 1.0
     },
     {
@@ -9394,7 +9394,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1450",
+      "source_location": "L1472",
       "weight": 1.0
     },
     {
@@ -9406,7 +9406,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1557",
+      "source_location": "L1579",
       "weight": 1.0
     },
     {
@@ -9418,7 +9418,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1155",
+      "source_location": "L1173",
       "weight": 1.0
     },
     {
@@ -9430,7 +9430,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1217",
+      "source_location": "L1237",
       "weight": 1.0
     },
     {
@@ -9442,7 +9442,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1250",
+      "source_location": "L1270",
       "weight": 1.0
     },
     {
@@ -9454,7 +9454,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L292",
+      "source_location": "L294",
       "weight": 1.0
     },
     {
@@ -9466,7 +9466,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L447",
+      "source_location": "L465",
       "weight": 1.0
     },
     {
@@ -9478,7 +9478,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L454",
+      "source_location": "L472",
       "weight": 1.0
     },
     {
@@ -9490,7 +9490,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L515",
+      "source_location": "L533",
       "weight": 1.0
     },
     {
@@ -9502,7 +9502,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L833",
+      "source_location": "L851",
       "weight": 1.0
     },
     {
@@ -9514,7 +9514,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L843",
+      "source_location": "L861",
       "weight": 1.0
     },
     {
@@ -9526,7 +9526,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L925",
+      "source_location": "L943",
       "weight": 1.0
     },
     {
@@ -9538,7 +9538,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L950",
+      "source_location": "L968",
       "weight": 1.0
     },
     {
@@ -10402,7 +10402,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2340",
+      "source_location": "L2366",
       "weight": 1.0
     },
     {
@@ -10414,7 +10414,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1794",
+      "source_location": "L1816",
       "weight": 1.0
     },
     {
@@ -10426,7 +10426,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1382",
+      "source_location": "L1404",
       "weight": 1.0
     },
     {
@@ -22087,7 +22087,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2094",
+      "source_location": "L2120",
       "weight": 1.0
     },
     {
@@ -22099,7 +22099,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2094",
+      "source_location": "L2120",
       "weight": 1.0
     },
     {
@@ -22111,7 +22111,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2340",
+      "source_location": "L2366",
       "weight": 1.0
     },
     {
@@ -22123,7 +22123,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1969",
+      "source_location": "L1995",
       "weight": 1.0
     },
     {
@@ -22135,7 +22135,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1969",
+      "source_location": "L1995",
       "weight": 1.0
     },
     {
@@ -22147,11 +22147,11 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1969",
+      "source_location": "L1995",
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903_onpostscroll",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827_onpostscroll",
       "target": "nestedscrollsource",
       "relation": "references",
       "_origin": "ast",
@@ -22159,7 +22159,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1904",
+      "source_location": "L1828",
       "weight": 1.0
     },
     {
@@ -22171,7 +22171,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2051",
+      "source_location": "L2077",
       "weight": 1.0
     },
     {
@@ -22183,7 +22183,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2051",
+      "source_location": "L2077",
       "weight": 1.0
     },
     {
@@ -22195,7 +22195,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1728",
+      "source_location": "L1750",
       "weight": 1.0
     },
     {
@@ -22207,7 +22207,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1382",
+      "source_location": "L1404",
       "weight": 1.0
     },
     {
@@ -22219,7 +22219,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1382",
+      "source_location": "L1404",
       "weight": 1.0
     },
     {
@@ -22291,7 +22291,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1773",
+      "source_location": "L1795",
       "weight": 1.0
     },
     {
@@ -22303,11 +22303,11 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2194",
+      "source_location": "L2220",
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204_onpostscroll",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230_onpostscroll",
       "target": "nestedscrollsource",
       "relation": "references",
       "_origin": "ast",
@@ -22315,7 +22315,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2205",
+      "source_location": "L2231",
       "weight": 1.0
     },
     {
@@ -22327,7 +22327,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1609",
+      "source_location": "L1631",
       "weight": 1.0
     },
     {
@@ -22339,7 +22339,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2136",
+      "source_location": "L2162",
       "weight": 1.0
     },
     {
@@ -22351,7 +22351,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2136",
+      "source_location": "L2162",
       "weight": 1.0
     },
     {
@@ -22363,7 +22363,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2136",
+      "source_location": "L2162",
       "weight": 1.0
     },
     {
@@ -22375,7 +22375,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2136",
+      "source_location": "L2162",
       "weight": 1.0
     },
     {
@@ -22727,7 +22727,7 @@
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903_onpostscroll",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827_onpostscroll",
       "target": "offset",
       "relation": "references",
       "_origin": "ast",
@@ -22735,7 +22735,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1904",
+      "source_location": "L1828",
       "weight": 1.0
     },
     {
@@ -22747,11 +22747,11 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1773",
+      "source_location": "L1795",
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204_onpostscroll",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230_onpostscroll",
       "target": "offset",
       "relation": "references",
       "_origin": "ast",
@@ -22759,7 +22759,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2205",
+      "source_location": "L2231",
       "weight": 1.0
     },
     {
@@ -23793,7 +23793,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1382",
+      "source_location": "L1404",
       "weight": 1.0
     },
     {
@@ -23804,7 +23804,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1609",
+      "source_location": "L1631",
       "weight": 1.0
     },
     {
@@ -23820,17 +23820,6 @@
     },
     {
       "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen",
-      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_pillbutton",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1728",
-      "weight": 1.0
-    },
-    {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen",
       "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_sm",
       "relation": "contains",
       "_origin": "ast",
@@ -23842,24 +23831,24 @@
     },
     {
       "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen",
+      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_pillbutton",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
+      "source_location": "L1750",
+      "weight": 1.0
+    },
+    {
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen",
       "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_pressscale",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1773",
-      "weight": 1.0
-    },
-    {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen",
-      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1794",
+      "source_location": "L1795",
       "weight": 1.0
     },
     {
@@ -23871,6 +23860,17 @@
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
       "source_location": "L180",
+      "weight": 1.0
+    },
+    {
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen",
+      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
+      "source_location": "L1816",
       "weight": 1.0
     },
     {
@@ -23925,7 +23925,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1969",
+      "source_location": "L1995",
       "weight": 1.0
     },
     {
@@ -23936,7 +23936,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2051",
+      "source_location": "L2077",
       "weight": 1.0
     },
     {
@@ -23947,7 +23947,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2094",
+      "source_location": "L2120",
       "weight": 1.0
     },
     {
@@ -23958,7 +23958,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2136",
+      "source_location": "L2162",
       "weight": 1.0
     },
     {
@@ -23969,7 +23969,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2194",
+      "source_location": "L2220",
       "weight": 1.0
     },
     {
@@ -23980,7 +23980,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2333",
+      "source_location": "L2359",
       "weight": 1.0
     },
     {
@@ -23991,29 +23991,29 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2340",
+      "source_location": "L2366",
       "weight": 1.0
     },
     {
       "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel",
-      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903",
+      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1903",
+      "source_location": "L1827",
       "weight": 1.0
     },
     {
       "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel",
-      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204",
+      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2204",
+      "source_location": "L2230",
       "weight": 1.0
     },
     {
@@ -24204,25 +24204,25 @@
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827",
       "target": "nestedscrollconnection",
       "relation": "implements",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1903",
+      "source_location": "L1827",
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230",
       "target": "nestedscrollconnection",
       "relation": "implements",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2204",
+      "source_location": "L2230",
       "weight": 1.0
     },
     {
@@ -25480,25 +25480,25 @@
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903",
-      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1903_onpostscroll",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827",
+      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_lyricspanel_object_nestedscrollconnection_l1827_onpostscroll",
       "relation": "method",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L1904",
+      "source_location": "L1828",
       "weight": 1.0
     },
     {
-      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204",
-      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2204_onpostscroll",
+      "source": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230",
+      "target": "app_src_main_java_com_jellymusic_player_ui_screens_playerscreen_queuepanel_object_nestedscrollconnection_l2230_onpostscroll",
       "relation": "method",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/src/main/java/com/jellymusic/player/ui/screens/PlayerScreen.kt",
-      "source_location": "L2205",
+      "source_location": "L2231",
       "weight": 1.0
     },
     {
@@ -25571,5 +25571,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "de6d32fbf680872f38d9f0614d1c1ca49e85ff9e"
+  "built_at_commit": "5f900d2317a3d93086f71932b0dc6dfdaab775e5"
 }

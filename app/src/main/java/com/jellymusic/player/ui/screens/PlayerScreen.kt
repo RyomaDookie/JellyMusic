@@ -209,11 +209,13 @@ fun PlayerScreen(
     var mode by remember { mutableStateOf(SheetMode.ART) }
     var lastContentMode by remember { mutableStateOf(SheetMode.LYRICS) }
     var savedModeBeforeCollapse by remember { mutableStateOf<SheetMode?>(null) }
+    var savedTrackIdBeforeCollapse by remember { mutableStateOf<String?>(null) }
 
     val handleCollapse: () -> Unit = {
         coroutineScope.launch {
             if (mode != SheetMode.ART) {
                 savedModeBeforeCollapse = mode
+                savedTrackIdBeforeCollapse = track.id
                 mode = SheetMode.ART
                 delay(120)
             }
@@ -379,6 +381,10 @@ fun PlayerScreen(
     var isInitialTrackComposition by remember { mutableStateOf(true) }
 
     LaunchedEffect(track.id) {
+        if (savedTrackIdBeforeCollapse != null && savedTrackIdBeforeCollapse != track.id) {
+            savedModeBeforeCollapse = null
+            savedTrackIdBeforeCollapse = null
+        }
         if (isInitialTrackComposition) {
             isInitialTrackComposition = false
             return@LaunchedEffect
@@ -407,16 +413,18 @@ fun PlayerScreen(
     }
 
     // Auto-revert to ART mode if current track has no lyrics or player collapses
-    LaunchedEffect(track.id, isLoadingLyrics, lyrics.size) {
+    LaunchedEffect(mode, track.id, isLoadingLyrics, lyrics.size) {
         if (!isLoadingLyrics && lyrics.isEmpty() && mode == SheetMode.LYRICS) {
             mode = SheetMode.ART
             savedModeBeforeCollapse = null
+            savedTrackIdBeforeCollapse = null
         }
     }
     LaunchedEffect(p < 0.2f) {
         if (p < 0.2f && mode != SheetMode.ART) {
             if (savedModeBeforeCollapse == null) {
                 savedModeBeforeCollapse = mode
+                savedTrackIdBeforeCollapse = track.id
             }
             mode = SheetMode.ART
         }
@@ -426,9 +434,19 @@ fun PlayerScreen(
     LaunchedEffect(p >= 0.98f) {
         if (p >= 0.98f && savedModeBeforeCollapse != null) {
             val restoreMode = savedModeBeforeCollapse
+            val restoreTrackId = savedTrackIdBeforeCollapse
             savedModeBeforeCollapse = null
-            delay(60)
-            mode = restoreMode ?: SheetMode.ART
+            savedTrackIdBeforeCollapse = null
+            if (restoreMode == SheetMode.LYRICS) {
+                // Restore lyrics ONLY if still on the same track AND lyrics are present or still loading
+                if (track.id == restoreTrackId && (isLoadingLyrics || lyrics.isNotEmpty())) {
+                    delay(60)
+                    mode = SheetMode.LYRICS
+                }
+            } else if (restoreMode != null) {
+                delay(60)
+                mode = restoreMode
+            }
         }
     }
 
@@ -1150,14 +1168,15 @@ fun PlayerScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Lyrics Pill Button (Greyed out if lyrics are not present)
+                // Lyrics Pill Button (Greyed out if lyrics are not present unless currently in lyrics mode)
                 val hasLyrics = !isLoadingLyrics && lyrics.isNotEmpty()
                 PillButton(
                     icon = Icons.Rounded.ChatBubbleOutline,
                     isActive = mode == SheetMode.LYRICS,
-                    enabled = hasLyrics && p > 0.6f,
+                    enabled = (hasLyrics || mode == SheetMode.LYRICS) && p > 0.6f,
                     onClick = {
                         savedModeBeforeCollapse = null
+                        savedTrackIdBeforeCollapse = null
                         mode = if (mode == SheetMode.LYRICS) SheetMode.ART else SheetMode.LYRICS
                     }
                 )
@@ -1206,6 +1225,7 @@ fun PlayerScreen(
                     enabled = p > 0.6f,
                     onClick = {
                         savedModeBeforeCollapse = null
+                        savedTrackIdBeforeCollapse = null
                         mode = if (mode == SheetMode.QUEUE) SheetMode.ART else SheetMode.QUEUE
                     }
                 )
@@ -1260,6 +1280,7 @@ fun PlayerScreen(
                                 moved = true
                                 if (dy > 0 && mode != SheetMode.ART) {
                                     savedModeBeforeCollapse = mode
+                                    savedTrackIdBeforeCollapse = track.id
                                     mode = SheetMode.ART
                                 }
                             }
@@ -1294,6 +1315,7 @@ fun PlayerScreen(
                             val target = if (proj > 0.5f) 1f else 0f
                             if (target == 0f && mode != SheetMode.ART) {
                                 savedModeBeforeCollapse = mode
+                                savedTrackIdBeforeCollapse = track.id
                                 mode = SheetMode.ART
                             }
                             coroutineScope.launch {
@@ -1801,9 +1823,27 @@ private fun LyricsPanel(
     onSeek: (Long) -> Unit,
     onCollapse: () -> Unit = {}
 ) {
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y > 15f && source == NestedScrollSource.UserInput) {
+                    onCollapse()
+                    return available
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     if (isLoading) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -1827,7 +1867,9 @@ private fun LyricsPanel(
 
     if (lyrics.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -1895,22 +1937,6 @@ private fun LyricsPanel(
                 } else {
                     listState.animateScrollToItem(index = activeIndex, scrollOffset = 0)
                 }
-            }
-        }
-    }
-
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                if (available.y > 15f && source == NestedScrollSource.UserInput) {
-                    onCollapse()
-                    return available
-                }
-                return Offset.Zero
             }
         }
     }
