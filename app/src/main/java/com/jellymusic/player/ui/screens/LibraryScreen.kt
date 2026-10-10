@@ -145,7 +145,7 @@ fun LibraryScreen(
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
     val availableWidth = (screenWidth - 40.dp).coerceAtLeast(280.dp)
-    val colGap = 14.dp
+    val colGap = 18.dp
     val colWidth = (availableWidth - colGap) / 2
 
     var searchQuery by remember { mutableStateOf("") }
@@ -1064,7 +1064,7 @@ private fun AdaptivePairContainer(
 ) {
     val density = LocalDensity.current
     val listRowHeightPx = remember(density) { with(density) { 66.dp.roundToPx() } }
-    val gridRowHeightPx = remember(density, colWidth) { with(density) { (colWidth + 52.dp).roundToPx() } }
+    val gridRowHeightPx = remember(density, colWidth) { with(density) { (colWidth + 72.dp).roundToPx() } }
     val listTotalHeightPx = remember(listRowHeightPx, hasB) { if (hasB) listRowHeightPx * 2 else listRowHeightPx }
 
     Box(
@@ -1109,7 +1109,7 @@ private fun AdaptiveLibraryItem(
     val listArtYPx = remember(density) { with(density) { 8.dp.toPx() } }
     val textXOffsetPx = remember(density) { with(density) { (50.dp + 14.dp).toPx() } }
     val textYListPx = remember(density) { with(density) { 14.dp.toPx() } }
-    val textYGridPx = remember(density, colWidth) { with(density) { (colWidth + 8.dp).toPx() } }
+    val textYGridPx = remember(density, colWidth) { with(density) { (colWidth + 12.dp).toPx() } }
     val maxTextWidthPx = remember(density, availableWidth, trailingWidth) {
         with(density) { (availableWidth - 64.dp - trailingWidth).toPx().coerceAtLeast(60.dp.toPx()) }
     }
@@ -1119,19 +1119,21 @@ private fun AdaptiveLibraryItem(
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
-        // Artwork Box (sized once at colWidth; scaled, translated and clipped smoothly on GPU)
+        // Artwork Box (ALWAYS a perfect square! Never cropped into rectangle)
         Box(
             modifier = Modifier
-                .size(colWidth)
+                .layout { measurable, _ ->
+                    val p = gridProgressProvider()
+                    val sPx = (listArtSizePx + (colWidthPx - listArtSizePx) * p).toInt()
+                    val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(sPx, sPx))
+                    layout(sPx, sPx) {
+                        placeable.place(0, 0)
+                    }
+                }
                 .graphicsLayer {
                     val p = gridProgressProvider()
-                    val targetSize = listArtSizePx + (colWidthPx - listArtSizePx) * p
-                    val scale = targetSize / colWidthPx
-                    scaleX = scale
-                    scaleY = scale
-                    transformOrigin = TransformOrigin(0f, 0f)
                     translationY = listArtYPx * (1f - p)
-                    val radiusPx = (10.dp.toPx() + 4.dp.toPx() * p)
+                    val radiusPx = with(density) { (10.dp + 4.dp * p).toPx() }
                     shape = RoundedCornerShape(radiusPx)
                     clip = true
                 }
@@ -1225,7 +1227,7 @@ private fun AdaptiveAlbumPairRow(
     val density = LocalDensity.current
     val listRowHeightPx = remember(density) { with(density) { 66.dp.toPx() } }
     val colWidthPx = remember(density, colWidth) { with(density) { colWidth.toPx() } }
-    val colGapPx = remember(density) { with(density) { 14.dp.toPx() } }
+    val colGapPx = remember(density) { with(density) { 18.dp.toPx() } }
 
     AdaptivePairContainer(
         hasB = alb1 != null,
@@ -1316,7 +1318,7 @@ private fun AdaptiveTrackPairRow(
     val density = LocalDensity.current
     val listRowHeightPx = remember(density) { with(density) { 66.dp.toPx() } }
     val colWidthPx = remember(density, colWidth) { with(density) { colWidth.toPx() } }
-    val colGapPx = remember(density) { with(density) { 14.dp.toPx() } }
+    val colGapPx = remember(density) { with(density) { 18.dp.toPx() } }
 
     AdaptivePairContainer(
         hasB = trk1 != null,
@@ -1433,7 +1435,7 @@ private fun AdaptivePlaylistPairRow(
     val density = LocalDensity.current
     val listRowHeightPx = remember(density) { with(density) { 66.dp.toPx() } }
     val colWidthPx = remember(density, colWidth) { with(density) { colWidth.toPx() } }
-    val colGapPx = remember(density) { with(density) { 14.dp.toPx() } }
+    val colGapPx = remember(density) { with(density) { 18.dp.toPx() } }
 
     AdaptivePairContainer(
         hasB = pl1 != null,

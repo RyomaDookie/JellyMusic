@@ -58,23 +58,23 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.FormatListBulleted
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOne
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.VolumeDown
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.FormatListBulleted
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOne
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.VolumeDown
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -324,19 +324,20 @@ fun PlayerScreen(
 
     val targetPalette = extractedPalette ?: fallbackPalette
 
+    val colorEase = remember { CubicBezierEasing(0.22f, 0.8f, 0.2f, 1f) }
     val orb1Color by animateColorAsState(
         targetValue = targetPalette.first,
-        animationSpec = tween(durationMillis = 1400),
+        animationSpec = tween(durationMillis = 650, easing = colorEase),
         label = "orb1Color"
     )
     val orb2Color by animateColorAsState(
         targetValue = targetPalette.second,
-        animationSpec = tween(durationMillis = 1400),
+        animationSpec = tween(durationMillis = 650, easing = colorEase),
         label = "orb2Color"
     )
     val orb3Color by animateColorAsState(
         targetValue = targetPalette.third,
-        animationSpec = tween(durationMillis = 1400),
+        animationSpec = tween(durationMillis = 650, easing = colorEase),
         label = "orb3Color"
     )
 
@@ -743,7 +744,7 @@ fun PlayerScreen(
                     }
             ) {
                 Icon(
-                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = "Preferiti",
                     tint = if (isLiked) ArtworkTextPrimary else Color(0xD9FFFFFF),
                     modifier = Modifier
@@ -881,6 +882,7 @@ fun PlayerScreen(
         val speedControlsAlpha = (1f - speedDialogAnim.value).coerceIn(0f, 1f)
 
         // Shuffle Button
+        // Shuffle Button
         if (shuffleAlpha > 0.001f) {
             val shuffleInteraction = remember { MutableInteractionSource() }
             IconButton(
@@ -894,7 +896,7 @@ fun PlayerScreen(
                     .pressScale(shuffleInteraction)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Shuffle,
+                    imageVector = Icons.Rounded.Shuffle,
                     contentDescription = "Shuffle",
                     tint = if (playbackState.isShuffleEnabled) ArtworkTextPrimary else Color(0x66FFFFFF),
                     modifier = Modifier.size(22.dp)
@@ -919,7 +921,7 @@ fun PlayerScreen(
                     .pressScale(prevInteraction)
             ) {
                 Icon(
-                    imageVector = Icons.Default.SkipPrevious,
+                    imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Precedente",
                     tint = ArtworkTextPrimary,
                     modifier = Modifier.size(36.dp)
@@ -940,7 +942,7 @@ fun PlayerScreen(
                 .pressScale(playInteraction)
         ) {
             Icon(
-                imageVector = if (playbackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                imageVector = if (playbackState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = if (playbackState.isPlaying) "Pausa" else "Riproduci",
                 tint = ArtworkTextPrimary,
                 modifier = Modifier
@@ -968,7 +970,7 @@ fun PlayerScreen(
                 .pressScale(nextInteraction)
         ) {
             Icon(
-                imageVector = Icons.Default.SkipNext,
+                imageVector = Icons.Rounded.SkipNext,
                 contentDescription = "Successivo",
                 tint = ArtworkTextPrimary,
                 modifier = Modifier
@@ -993,7 +995,7 @@ fun PlayerScreen(
                     .graphicsLayer { alpha = repeatAlpha * speedControlsAlpha }
                     .pressScale(repeatInteraction)
             ) {
-                val icon = if (playbackState.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
+                val icon = if (playbackState.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat
                 val isRepeatActive = playbackState.repeatMode != Player.REPEAT_MODE_OFF
                 Icon(
                     imageVector = icon,
@@ -1018,7 +1020,7 @@ fun PlayerScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.VolumeDown,
+                    imageVector = Icons.Rounded.VolumeDown,
                     contentDescription = "Volume giù",
                     tint = Color(0xA6FFFFFF),
                     modifier = Modifier.size(18.dp)
@@ -1069,7 +1071,7 @@ fun PlayerScreen(
                 }
 
                 Icon(
-                    imageVector = Icons.Default.VolumeUp,
+                    imageVector = Icons.Rounded.VolumeUp,
                     contentDescription = "Volume su",
                     tint = Color(0xA6FFFFFF),
                     modifier = Modifier.size(18.dp)
@@ -1093,13 +1095,13 @@ fun PlayerScreen(
                 // Lyrics Pill Button (Greyed out if lyrics are not present)
                 val hasLyrics = !isLoadingLyrics && lyrics.isNotEmpty()
                 PillButton(
-                    icon = Icons.Default.ChatBubbleOutline,
+                    icon = Icons.Rounded.ChatBubbleOutline,
                     isActive = mode == SheetMode.LYRICS,
                     enabled = hasLyrics && p > 0.6f,
                     onClick = { mode = if (mode == SheetMode.LYRICS) SheetMode.ART else SheetMode.LYRICS }
                 )
 
-                // Playback Speed Button (Translucent frosted box)
+                // Playback Speed Button (Clean flat translucent pill, NO frosted blur when closed)
                 val minPillWidth = if (playbackState.isPitchLinked) 80.dp else 66.dp
                 Box(
                     modifier = Modifier
@@ -1109,31 +1111,19 @@ fun PlayerScreen(
                             alpha = if (showSpeedDialog) 0f else 1f
                         }
                         .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, Color(0x38FFFFFF), RoundedCornerShape(12.dp))
+                        .background(Color(0x18FFFFFF))
+                        .border(1.dp, Color(0x28FFFFFF), RoundedCornerShape(12.dp))
                         .pressScale(remember { MutableInteractionSource() })
                         .clickable(enabled = p > 0.6f && !showSpeedDialog) { showSpeedDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
-                    // Frosted blur backdrop layer inside the box (behind text/icon)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color(0x30FFFFFF), Color(0x18FFFFFF))
-                                )
-                            )
-                            .blur(6.dp)
-                    )
-
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (playbackState.isPitchLinked) {
                             Icon(
-                                imageVector = Icons.Default.Tune,
+                                imageVector = Icons.Rounded.Tune,
                                 contentDescription = null,
                                 tint = ArtworkTextPrimary,
                                 modifier = Modifier.size(13.dp)
@@ -1150,7 +1140,7 @@ fun PlayerScreen(
 
                 // Queue Pill Button
                 PillButton(
-                    icon = Icons.Default.FormatListBulleted,
+                    icon = Icons.Rounded.FormatListBulleted,
                     isActive = mode == SheetMode.QUEUE,
                     enabled = p > 0.6f,
                     onClick = { mode = if (mode == SheetMode.QUEUE) SheetMode.ART else SheetMode.QUEUE }
@@ -1442,7 +1432,7 @@ private fun PlaybackSpeedDialog(
             ) {
                 if (isPitchLinked) {
                     Icon(
-                        imageVector = Icons.Default.Tune,
+                        imageVector = Icons.Rounded.Tune,
                         contentDescription = null,
                         tint = ArtworkTextPrimary,
                         modifier = Modifier
@@ -2016,7 +2006,7 @@ private fun QueuePanel(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowUp,
+                                imageVector = Icons.Rounded.KeyboardArrowUp,
                                 contentDescription = "Sposta su",
                                 tint = if (index > 0) ArtworkTextPrimary else Color(0x33FFFFFF),
                                 modifier = Modifier.size(20.dp)
@@ -2028,7 +2018,7 @@ private fun QueuePanel(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
+                                imageVector = Icons.Rounded.KeyboardArrowDown,
                                 contentDescription = "Sposta giù",
                                 tint = if (index < playbackState.queue.size - 1) ArtworkTextPrimary else Color(0x33FFFFFF),
                                 modifier = Modifier.size(20.dp)
@@ -2098,9 +2088,17 @@ private fun extractArtworkPalette(bitmap: Bitmap): Triple<Color, Color, Color> {
         ?: validColors.minByOrNull { it.v }
         ?: c1
 
+    fun boostVibrancy(argb: Int): Int {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(argb, hsv)
+        hsv[1] = (hsv[1] * 1.35f).coerceIn(0.28f, 0.95f)
+        hsv[2] = (hsv[2] * 1.15f).coerceIn(0.35f, 0.92f)
+        return android.graphics.Color.HSVToColor(hsv)
+    }
+
     return Triple(
-        Color(c1.argb),
-        Color(c2.argb),
-        Color(c3.argb)
+        Color(boostVibrancy(c1.argb)),
+        Color(boostVibrancy(c2.argb)),
+        Color(boostVibrancy(c3.argb))
     )
 }
