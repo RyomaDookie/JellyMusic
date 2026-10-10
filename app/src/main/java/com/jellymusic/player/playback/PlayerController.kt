@@ -148,7 +148,7 @@ class PlayerController(
                         durationMs = player.duration.coerceAtLeast(0L)
                     )
                 }
-                delay(500)
+                delay(25)
             }
         }
     }

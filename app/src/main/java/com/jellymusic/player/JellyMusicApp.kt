@@ -8,6 +8,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.jellymusic.player.data.JellyfinClient
+import com.jellymusic.player.data.LyricsService
 import com.jellymusic.player.debug.DebugLogManager
 import com.jellymusic.player.playback.PlaybackService
 import com.jellymusic.player.playback.PlayerController
@@ -31,6 +32,8 @@ class JellyMusicApp : Application(), ImageLoaderFactory {
     lateinit var jellyfinClient: JellyfinClient
         private set
     lateinit var playerController: PlayerController
+        private set
+    lateinit var lyricsService: LyricsService
         private set
 
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -65,6 +68,7 @@ class JellyMusicApp : Application(), ImageLoaderFactory {
 
         preferences = AppPreferences(this)
         jellyfinClient = JellyfinClient()
+        lyricsService = LyricsService(jellyfinClient)
         playerController = PlayerController(jellyfinClient)
 
         // Initialize credentials and prefetch tracks for Android Auto / background startup

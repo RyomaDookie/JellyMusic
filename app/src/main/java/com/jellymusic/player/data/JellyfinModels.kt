@@ -92,10 +92,33 @@ data class LyricsResponse(
 )
 
 @Serializable
+data class LyricSpan(
+    val text: String,
+    val startMs: Long,
+    val endMs: Long
+)
+
+@Serializable
+data class LyricWord(
+    val text: String,
+    val startMs: Long,
+    val endMs: Long,
+    val syllables: List<LyricSpan> = emptyList()
+)
+
+@Serializable
 data class LyricLineDto(
     @SerialName("Text") val text: String = "",
-    @SerialName("Start") val startTicks: Long? = null
+    @SerialName("Start") val startTicks: Long? = null,
+    val endTicks: Long? = null,
+    val spans: List<LyricSpan> = emptyList(),
+    val words: List<LyricWord> = emptyList()
 ) {
     val startMs: Long
         get() = (startTicks ?: 0L) / 10_000L
+    val endMs: Long
+        get() = (endTicks ?: 0L) / 10_000L
+    val hasSyllables: Boolean
+        get() = words.isNotEmpty() || spans.isNotEmpty()
 }
+
