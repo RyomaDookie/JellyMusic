@@ -2,6 +2,7 @@ package com.jellymusic.player.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -130,9 +131,9 @@ fun LibraryScreen(
     var isGridView by remember { mutableStateOf(true) }
     val gridProgress by animateFloatAsState(
         targetValue = if (isGridView) 1f else 0f,
-        animationSpec = spring(
-            dampingRatio = 0.85f,
-            stiffness = 350f
+        animationSpec = tween(
+            durationMillis = 550,
+            easing = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
         ),
         label = "gridMorph"
     )
@@ -251,6 +252,17 @@ fun LibraryScreen(
         }
         sortTracks(filtered, currentSort)
     }
+
+    val albumTrackCounts = remember(tracks) {
+        tracks.filter { !it.album.isNullOrBlank() }
+            .groupingBy { (it.album ?: "").trim().lowercase() }
+            .eachCount()
+    }
+
+    val albumPairs = remember(displayedAlbums) { displayedAlbums.chunked(2) }
+    val trackPairs = remember(displayedTracks) { displayedTracks.chunked(2) }
+    val playlistPairs = remember(displayedPlaylists) { displayedPlaylists.chunked(2) }
+    val favoritePairs = remember(displayedFavorites) { displayedFavorites.chunked(2) }
 
     fun toggleFavorite(targetTrack: JellyfinItem) {
         val newFav = !targetTrack.isFavorite
@@ -770,18 +782,24 @@ fun LibraryScreen(
                             item { EmptyPlaceholder("Nessun album trovato") }
                         } else {
                             itemsIndexed(
-                                items = displayedAlbums.chunked(2),
+                                items = albumPairs,
                                 key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
                             ) { _, pair ->
+                                val alb0 = pair[0]
+                                val alb1 = pair.getOrNull(1)
                                 AdaptiveAlbumPairRow(
                                     pair = pair,
                                     gridProgress = gridProgress,
                                     colWidth = colWidth,
                                     availableWidth = availableWidth,
                                     playbackState = playbackState,
-                                    getTracksForAlbum = ::getTracksForAlbum,
+                                    trackCountA = albumTrackCounts[(alb0.album ?: alb0.name).trim().lowercase()] ?: 0,
+                                    trackCountB = alb1?.let { albumTrackCounts[(it.album ?: it.name).trim().lowercase()] ?: 0 } ?: 0,
                                     onSelectAlbum = { selectedAlbum = it },
-                                    onPlayAlbum = { trks -> controller.playQueue(trks, 0, kbps) }
+                                    onPlayAlbum = { alb ->
+                                        val trks = getTracksForAlbum(alb)
+                                        if (trks.isNotEmpty()) controller.playQueue(trks, 0, kbps)
+                                    }
                                 )
                             }
                         }
@@ -792,7 +810,7 @@ fun LibraryScreen(
                             item { EmptyPlaceholder("Nessun brano trovato") }
                         } else {
                             itemsIndexed(
-                                items = displayedTracks.chunked(2),
+                                items = trackPairs,
                                 key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
                             ) { _, pair ->
                                 AdaptiveTrackPairRow(
@@ -839,7 +857,7 @@ fun LibraryScreen(
                             }
                         } else {
                             itemsIndexed(
-                                items = displayedPlaylists.chunked(2),
+                                items = playlistPairs,
                                 key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
                             ) { _, pair ->
                                 AdaptivePlaylistPairRow(
@@ -868,7 +886,7 @@ fun LibraryScreen(
                             item { EmptyPlaceholder("Nessun brano preferito su Jellyfin") }
                         } else {
                             itemsIndexed(
-                                items = displayedFavorites.chunked(2),
+                                items = favoritePairs,
                                 key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
                             ) { _, pair ->
                                 AdaptiveTrackPairRow(
@@ -1058,17 +1076,6 @@ private fun AdaptivePairContainer(
             .height(totalRowHeight)
     ) {
         content(itemWidth, itemHeight, itemBX, itemBY)
-
-        // Apple-style divider line between list row A and list row B in list view
-        if (hasB && gridProgress < 0.3f) {
-            Box(
-                modifier = Modifier
-                    .offset(x = 64.dp, y = 65.5.dp)
-                    .fillMaxWidth()
-                    .height(0.5.dp)
-                    .background(Color(0x14FFFFFF).copy(alpha = (1f - gridProgress * 3.33f).coerceIn(0f, 1f)))
-            )
-        }
     }
 }
 
@@ -1104,14 +1111,13 @@ private fun AdaptiveLibraryItem(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
     ) {
-        // Artwork Box with dynamic size & corner radius
+        // Artwork Box with clean rounded corner - NO white border and NO visualizer badge on cover
         Box(
             modifier = Modifier
                 .offset(x = 0.dp, y = artY)
                 .size(artSize)
                 .clip(RoundedCornerShape(cornerRadius))
                 .background(AppleSurface)
-                .border(1.dp, AppleBorder, RoundedCornerShape(cornerRadius))
         ) {
             AsyncImage(
                 model = artworkUrl,
@@ -1119,20 +1125,6 @@ private fun AdaptiveLibraryItem(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-
-            if (isPlaying) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(lerpDp(4.dp, 8.dp, gridProgress))
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xB3000000))
-                        .padding(horizontal = 5.dp, vertical = 3.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AnimatedEqualizer()
-                }
-            }
         }
 
         // Title & Artist Column smoothly traveling from bottom to right
@@ -1159,12 +1151,12 @@ private fun AdaptiveLibraryItem(
             )
         }
 
-        // Trailing actions (heart, playlist add, play icon, chevron)
-        if (trailingContent != null && gridProgress < 0.5f) {
+        // Trailing actions - smoothly synchronized fade
+        if (trailingContent != null && gridProgress < 0.6f) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .graphicsLayer { alpha = ((1f - gridProgress * 2f).coerceIn(0f, 1f)) }
+                    .graphicsLayer { alpha = (1f - gridProgress).coerceIn(0f, 1f) }
             ) {
                 trailingContent()
             }
@@ -1179,19 +1171,18 @@ private fun AdaptiveAlbumPairRow(
     colWidth: Dp,
     availableWidth: Dp,
     playbackState: PlaybackState,
-    getTracksForAlbum: (JellyfinItem) -> List<JellyfinItem>,
+    trackCountA: Int,
+    trackCountB: Int,
     onSelectAlbum: (JellyfinItem) -> Unit,
-    onPlayAlbum: (List<JellyfinItem>) -> Unit
+    onPlayAlbum: (JellyfinItem) -> Unit
 ) {
     val client = JellyMusicApp.instance.jellyfinClient
     val alb0 = pair[0]
-    val trks0 = remember(alb0) { getTracksForAlbum(alb0) }
     val isPlaying0 = playbackState.currentTrack?.let { trk ->
         trk.album?.equals(alb0.name, ignoreCase = true) == true
     } == true && playbackState.isPlaying
 
     val alb1 = pair.getOrNull(1)
-    val trks1 = alb1?.let { remember(it) { getTracksForAlbum(it) } } ?: emptyList()
     val isPlaying1 = alb1?.let { a1 ->
         playbackState.currentTrack?.let { trk ->
             trk.album?.equals(a1.name, ignoreCase = true) == true
@@ -1209,7 +1200,7 @@ private fun AdaptiveAlbumPairRow(
             modifier = Modifier,
             artworkUrl = client.getArtworkUrl(alb0.id, maxWidth = 320),
             title = alb0.name,
-            subtitle = if (gridProgress > 0.4f) alb0.artistName else "${alb0.artistName} • ${trks0.size} brani",
+            subtitle = if (gridProgress > 0.4f) alb0.artistName else "${alb0.artistName} • $trackCountA brani",
             isPlaying = isPlaying0,
             gridProgress = gridProgress,
             itemWidth = itemWidth,
@@ -1220,7 +1211,7 @@ private fun AdaptiveAlbumPairRow(
             onClick = { onSelectAlbum(alb0) },
             trailingContent = {
                 IconButton(
-                    onClick = { if (trks0.isNotEmpty()) onPlayAlbum(trks0) },
+                    onClick = { onPlayAlbum(alb0) },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
@@ -1239,7 +1230,7 @@ private fun AdaptiveAlbumPairRow(
                 modifier = Modifier.offset(x = itemBX, y = itemBY),
                 artworkUrl = client.getArtworkUrl(alb1.id, maxWidth = 320),
                 title = alb1.name,
-                subtitle = if (gridProgress > 0.4f) alb1.artistName else "${alb1.artistName} • ${trks1.size} brani",
+                subtitle = if (gridProgress > 0.4f) alb1.artistName else "${alb1.artistName} • $trackCountB brani",
                 isPlaying = isPlaying1,
                 gridProgress = gridProgress,
                 itemWidth = itemWidth,
@@ -1250,7 +1241,7 @@ private fun AdaptiveAlbumPairRow(
                 onClick = { onSelectAlbum(alb1) },
                 trailingContent = {
                     IconButton(
-                        onClick = { if (trks1.isNotEmpty()) onPlayAlbum(trks1) },
+                        onClick = { onPlayAlbum(alb1) },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
