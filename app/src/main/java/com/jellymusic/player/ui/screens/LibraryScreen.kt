@@ -5,8 +5,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,6 +18,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -121,6 +128,21 @@ fun LibraryScreen(
 
     var selectedCategory by remember { mutableStateOf(LibraryCategory.ALBUMS) }
     var isGridView by remember { mutableStateOf(true) }
+    val gridProgress by animateFloatAsState(
+        targetValue = if (isGridView) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.85f,
+            stiffness = 350f
+        ),
+        label = "gridMorph"
+    )
+
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val availableWidth = (screenWidth - 40.dp).coerceAtLeast(280.dp)
+    val colGap = 14.dp
+    val colWidth = (availableWidth - colGap) / 2
+
     var searchQuery by remember { mutableStateOf("") }
     var isSearchVisible by remember { mutableStateOf(false) }
 
@@ -741,114 +763,26 @@ fun LibraryScreen(
                     }
                 }
 
-                // --- CONTENT AREA (FUNCTIONAL GRID & LIST VIEWS FOR ALL CATEGORIES) ---
+                // --- CONTENT AREA (SMOOTH MORPHING GRID & LIST VIEWS FOR ALL CATEGORIES) ---
                 when (selectedCategory) {
                     LibraryCategory.ALBUMS -> {
                         if (displayedAlbums.isEmpty()) {
                             item { EmptyPlaceholder("Nessun album trovato") }
-                        } else if (isGridView) {
-                            itemsIndexed(displayedAlbums.chunked(2)) { _, pair ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    val alb0 = pair[0]
-                                    val trks0 = getTracksForAlbum(alb0)
-                                    AlbumCard(
-                                        album = alb0,
-                                        isPlaying = playbackState.currentTrack?.let { trk ->
-                                            trk.album?.equals(alb0.name, ignoreCase = true) == true
-                                        } == true && playbackState.isPlaying,
-                                        onClick = {
-                                            selectedAlbum = alb0
-                                        },
-                                        onQuickPlay = {
-                                            if (trks0.isNotEmpty()) {
-                                                controller.playQueue(trks0, 0, kbps)
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    if (pair.size > 1) {
-                                        val alb1 = pair[1]
-                                        val trks1 = getTracksForAlbum(alb1)
-                                        AlbumCard(
-                                            album = alb1,
-                                            isPlaying = playbackState.currentTrack?.let { trk ->
-                                                trk.album?.equals(alb1.name, ignoreCase = true) == true
-                                            } == true && playbackState.isPlaying,
-                                            onClick = {
-                                                selectedAlbum = alb1
-                                            },
-                                            onQuickPlay = {
-                                                if (trks1.isNotEmpty()) {
-                                                    controller.playQueue(trks1, 0, kbps)
-                                                }
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
                         } else {
-                            // Albums List View
-                            itemsIndexed(displayedAlbums) { _, alb ->
-                                val albTracks = getTracksForAlbum(alb)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { selectedAlbum = alb }
-                                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AsyncImage(
-                                        model = client.getArtworkUrl(alb.id, maxWidth = 160),
-                                        contentDescription = alb.name,
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(AppleSurface)
-                                            .border(1.dp, AppleBorder, RoundedCornerShape(10.dp)),
-                                        contentScale = ContentScale.Crop
-                                    )
-
-                                    Spacer(modifier = Modifier.width(14.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = alb.name,
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "${alb.artistName} • ${albTracks.size} brani",
-                                            color = AppleTextMuted,
-                                            fontSize = 13.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-
-                                    IconButton(onClick = {
-                                        if (albTracks.isNotEmpty()) controller.playQueue(albTracks, 0, kbps)
-                                    }) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = "Riproduci",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-                                }
+                            itemsIndexed(
+                                items = displayedAlbums.chunked(2),
+                                key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
+                            ) { _, pair ->
+                                AdaptiveAlbumPairRow(
+                                    pair = pair,
+                                    gridProgress = gridProgress,
+                                    colWidth = colWidth,
+                                    availableWidth = availableWidth,
+                                    playbackState = playbackState,
+                                    getTracksForAlbum = ::getTracksForAlbum,
+                                    onSelectAlbum = { selectedAlbum = it },
+                                    onPlayAlbum = { trks -> controller.playQueue(trks, 0, kbps) }
+                                )
                             }
                         }
                     }
@@ -856,51 +790,23 @@ fun LibraryScreen(
                     LibraryCategory.TRACKS -> {
                         if (displayedTracks.isEmpty()) {
                             item { EmptyPlaceholder("Nessun brano trovato") }
-                        } else if (isGridView) {
-                            itemsIndexed(displayedTracks.chunked(2)) { _, pair ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    val trk0 = pair[0]
-                                    TrackGridCard(
-                                        track = trk0,
-                                        isPlaying = playbackState.currentTrack?.id == trk0.id && playbackState.isPlaying,
-                                        onPlay = {
-                                            val idx = displayedTracks.indexOf(trk0)
-                                            controller.playQueue(displayedTracks, idx.coerceAtLeast(0), kbps)
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    if (pair.size > 1) {
-                                        val trk1 = pair[1]
-                                        TrackGridCard(
-                                            track = trk1,
-                                            isPlaying = playbackState.currentTrack?.id == trk1.id && playbackState.isPlaying,
-                                            onPlay = {
-                                                val idx = displayedTracks.indexOf(trk1)
-                                                controller.playQueue(displayedTracks, idx.coerceAtLeast(0), kbps)
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
                         } else {
-                            itemsIndexed(displayedTracks) { index, trk ->
-                                val isPlayingNow = playbackState.currentTrack?.id == trk.id && playbackState.isPlaying
-                                TrackListItem(
-                                    track = trk,
-                                    index = index + 1,
-                                    isPlaying = isPlayingNow,
-                                    onPlay = { controller.playQueue(displayedTracks, index, kbps) },
-                                    onToggleFavorite = { toggleFavorite(trk) },
-                                    onAddToPlaylist = { trackToAddToPlaylist = trk }
+                            itemsIndexed(
+                                items = displayedTracks.chunked(2),
+                                key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
+                            ) { _, pair ->
+                                AdaptiveTrackPairRow(
+                                    pair = pair,
+                                    gridProgress = gridProgress,
+                                    colWidth = colWidth,
+                                    availableWidth = availableWidth,
+                                    playbackState = playbackState,
+                                    onPlay = { target ->
+                                        val idx = displayedTracks.indexOf(target)
+                                        controller.playQueue(displayedTracks, idx.coerceAtLeast(0), kbps)
+                                    },
+                                    onToggleFavorite = { toggleFavorite(it) },
+                                    onAddToPlaylist = { trackToAddToPlaylist = it }
                                 )
                             }
                         }
@@ -931,129 +837,28 @@ fun LibraryScreen(
                                     }
                                 }
                             }
-                        } else if (isGridView) {
-                            itemsIndexed(displayedPlaylists.chunked(2)) { _, pair ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    val pl0 = pair[0]
-                                    PlaylistGridCard(
-                                        playlist = pl0,
-                                        onClick = {
-                                            selectedPlaylist = pl0
-                                            playlistTracks = emptyList()
-                                            isPlaylistTracksLoading = true
-                                            scope.launch {
-                                                client.getPlaylistTracks(pl0.id).onSuccess {
-                                                    playlistTracks = it
-                                                    isPlaylistTracksLoading = false
-                                                }
-                                            }
-                                        },
-                                        onQuickPlay = {
-                                            scope.launch {
-                                                client.getPlaylistTracks(pl0.id).onSuccess { list ->
-                                                    if (list.isNotEmpty()) controller.playQueue(list, 0, kbps)
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    if (pair.size > 1) {
-                                        val pl1 = pair[1]
-                                        PlaylistGridCard(
-                                            playlist = pl1,
-                                            onClick = {
-                                                selectedPlaylist = pl1
-                                                playlistTracks = emptyList()
-                                                isPlaylistTracksLoading = true
-                                                scope.launch {
-                                                    client.getPlaylistTracks(pl1.id).onSuccess {
-                                                        playlistTracks = it
-                                                        isPlaylistTracksLoading = false
-                                                    }
-                                                }
-                                            },
-                                            onQuickPlay = {
-                                                scope.launch {
-                                                    client.getPlaylistTracks(pl1.id).onSuccess { list ->
-                                                        if (list.isNotEmpty()) controller.playQueue(list, 0, kbps)
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
                         } else {
-                            // Playlists List View with Real Server Image
-                            itemsIndexed(displayedPlaylists) { _, pl ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            selectedPlaylist = pl
-                                            playlistTracks = emptyList()
-                                            isPlaylistTracksLoading = true
-                                            scope.launch {
-                                                client.getPlaylistTracks(pl.id).onSuccess {
-                                                    playlistTracks = it
-                                                    isPlaylistTracksLoading = false
-                                                }
+                            itemsIndexed(
+                                items = displayedPlaylists.chunked(2),
+                                key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
+                            ) { _, pair ->
+                                AdaptivePlaylistPairRow(
+                                    pair = pair,
+                                    gridProgress = gridProgress,
+                                    colWidth = colWidth,
+                                    availableWidth = availableWidth,
+                                    onOpenPlaylist = { pl ->
+                                        selectedPlaylist = pl
+                                        playlistTracks = emptyList()
+                                        isPlaylistTracksLoading = true
+                                        scope.launch {
+                                            client.getPlaylistTracks(pl.id).onSuccess {
+                                                playlistTracks = it
+                                                isPlaylistTracksLoading = false
                                             }
                                         }
-                                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(54.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(AppleSurface)
-                                            .border(1.dp, AppleBorder, RoundedCornerShape(10.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        AsyncImage(
-                                            model = client.getArtworkUrl(pl.id, maxWidth = 200),
-                                            contentDescription = pl.name,
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Crop
-                                        )
                                     }
-
-                                    Spacer(modifier = Modifier.width(14.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = pl.name,
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "Playlist Jellyfin",
-                                            color = AppleTextMuted,
-                                            fontSize = 13.sp
-                                        )
-                                    }
-
-                                    Icon(
-                                        imageVector = Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        tint = AppleTextMuted,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
+                                )
                             }
                         }
                     }
@@ -1061,51 +866,23 @@ fun LibraryScreen(
                     LibraryCategory.FAVORITES -> {
                         if (displayedFavorites.isEmpty()) {
                             item { EmptyPlaceholder("Nessun brano preferito su Jellyfin") }
-                        } else if (isGridView) {
-                            itemsIndexed(displayedFavorites.chunked(2)) { _, pair ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    val trk0 = pair[0]
-                                    TrackGridCard(
-                                        track = trk0,
-                                        isPlaying = playbackState.currentTrack?.id == trk0.id && playbackState.isPlaying,
-                                        onPlay = {
-                                            val idx = displayedFavorites.indexOf(trk0)
-                                            controller.playQueue(displayedFavorites, idx.coerceAtLeast(0), kbps)
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    if (pair.size > 1) {
-                                        val trk1 = pair[1]
-                                        TrackGridCard(
-                                            track = trk1,
-                                            isPlaying = playbackState.currentTrack?.id == trk1.id && playbackState.isPlaying,
-                                            onPlay = {
-                                                val idx = displayedFavorites.indexOf(trk1)
-                                                controller.playQueue(displayedFavorites, idx.coerceAtLeast(0), kbps)
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
                         } else {
-                            itemsIndexed(displayedFavorites) { index, trk ->
-                                val isPlayingNow = playbackState.currentTrack?.id == trk.id && playbackState.isPlaying
-                                TrackListItem(
-                                    track = trk,
-                                    index = index + 1,
-                                    isPlaying = isPlayingNow,
-                                    onPlay = { controller.playQueue(displayedFavorites, index, kbps) },
-                                    onToggleFavorite = { toggleFavorite(trk) },
-                                    onAddToPlaylist = { trackToAddToPlaylist = trk }
+                            itemsIndexed(
+                                items = displayedFavorites.chunked(2),
+                                key = { _, pair -> pair[0].id + "_" + (pair.getOrNull(1)?.id ?: "single") }
+                            ) { _, pair ->
+                                AdaptiveTrackPairRow(
+                                    pair = pair,
+                                    gridProgress = gridProgress,
+                                    colWidth = colWidth,
+                                    availableWidth = availableWidth,
+                                    playbackState = playbackState,
+                                    onPlay = { target ->
+                                        val idx = displayedFavorites.indexOf(target)
+                                        controller.playQueue(displayedFavorites, idx.coerceAtLeast(0), kbps)
+                                    },
+                                    onToggleFavorite = { toggleFavorite(it) },
+                                    onAddToPlaylist = { trackToAddToPlaylist = it }
                                 )
                             }
                         }
@@ -1249,34 +1026,96 @@ private fun CategoryRow(
     }
 }
 
-/**
- * 2-Column Album Card with squircle border and quick play button (NO quality badges).
- */
+private fun lerpDp(start: Dp, stop: Dp, fraction: Float): Dp =
+    (start.value + (stop.value - start.value) * fraction).dp
+
+private fun lerpSp(start: TextUnit, stop: TextUnit, fraction: Float): TextUnit =
+    (start.value + (stop.value - start.value) * fraction).sp
+
 @Composable
-private fun AlbumCard(
-    album: JellyfinItem,
-    isPlaying: Boolean,
-    onClick: () -> Unit,
-    onQuickPlay: () -> Unit = {},
-    modifier: Modifier = Modifier
+private fun AdaptivePairContainer(
+    hasB: Boolean,
+    gridProgress: Float,
+    colWidth: Dp,
+    availableWidth: Dp,
+    content: @Composable (itemWidth: Dp, itemHeight: Dp, itemBX: Dp, itemBY: Dp) -> Unit
 ) {
-    val client = JellyMusicApp.instance.jellyfinClient
-    Column(
+    val listRowHeight = 66.dp
+    val gridRowHeight = colWidth + 52.dp
+    val colGap = 14.dp
+
+    val totalRowHeight = lerpDp(if (hasB) listRowHeight * 2 else listRowHeight, gridRowHeight, gridProgress)
+    val itemWidth = lerpDp(availableWidth, colWidth, gridProgress)
+    val itemHeight = lerpDp(listRowHeight, gridRowHeight, gridProgress)
+
+    val itemBX = lerpDp(0.dp, colWidth + colGap, gridProgress)
+    val itemBY = lerpDp(listRowHeight, 0.dp, gridProgress)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = lerpDp(1.dp, 6.dp, gridProgress))
+            .height(totalRowHeight)
+    ) {
+        content(itemWidth, itemHeight, itemBX, itemBY)
+
+        // Apple-style divider line between list row A and list row B in list view
+        if (hasB && gridProgress < 0.3f) {
+            Box(
+                modifier = Modifier
+                    .offset(x = 64.dp, y = 65.5.dp)
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(Color(0x14FFFFFF).copy(alpha = (1f - gridProgress * 3.33f).coerceIn(0f, 1f)))
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveLibraryItem(
+    modifier: Modifier = Modifier,
+    artworkUrl: String?,
+    title: String,
+    subtitle: String,
+    isPlaying: Boolean,
+    gridProgress: Float,
+    itemWidth: Dp,
+    itemHeight: Dp,
+    colWidth: Dp,
+    totalWidth: Dp,
+    trailingWidth: Dp = 0.dp,
+    onClick: () -> Unit,
+    trailingContent: (@Composable () -> Unit)? = null
+) {
+    val listArtSize = 50.dp
+    val artSize = lerpDp(listArtSize, colWidth, gridProgress)
+    val artY = lerpDp(8.dp, 0.dp, gridProgress)
+    val cornerRadius = lerpDp(10.dp, 14.dp, gridProgress)
+
+    val textX = lerpDp(listArtSize + 14.dp, 0.dp, gridProgress)
+    val textY = lerpDp(14.dp, colWidth + 8.dp, gridProgress)
+    val maxTextWidth = (totalWidth - (listArtSize + 14.dp) - trailingWidth).coerceAtLeast(60.dp)
+    val textWidth = lerpDp(maxTextWidth, colWidth, gridProgress)
+
+    Box(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .size(itemWidth, itemHeight)
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
     ) {
+        // Artwork Box with dynamic size & corner radius
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
+                .offset(x = 0.dp, y = artY)
+                .size(artSize)
+                .clip(RoundedCornerShape(cornerRadius))
                 .background(AppleSurface)
-                .border(1.dp, AppleBorder, RoundedCornerShape(14.dp))
+                .border(1.dp, AppleBorder, RoundedCornerShape(cornerRadius))
         ) {
             AsyncImage(
-                model = client.getArtworkUrl(album.id, maxWidth = 300),
-                contentDescription = album.name,
+                model = artworkUrl,
+                contentDescription = title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
@@ -1285,10 +1124,10 @@ private fun AlbumCard(
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(8.dp)
+                        .padding(lerpDp(4.dp, 8.dp, gridProgress))
                         .clip(RoundedCornerShape(6.dp))
                         .background(Color(0xB3000000))
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                        .padding(horizontal = 5.dp, vertical = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     AnimatedEqualizer()
@@ -1296,144 +1135,336 @@ private fun AlbumCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // Title & Artist Column smoothly traveling from bottom to right
+        Column(
+            modifier = Modifier
+                .offset(x = textX, y = textY)
+                .width(textWidth)
+        ) {
+            Text(
+                text = title,
+                color = if (isPlaying) Color.White else Color(0xFFF0F0F0),
+                fontSize = lerpSp(15.sp, 14.sp, gridProgress),
+                fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = AppleTextMuted,
+                fontSize = lerpSp(13.sp, 12.sp, gridProgress),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
-        Text(
-            text = album.name,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = album.artistName,
-            color = AppleTextMuted,
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        // Trailing actions (heart, playlist add, play icon, chevron)
+        if (trailingContent != null && gridProgress < 0.5f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .graphicsLayer { alpha = ((1f - gridProgress * 2f).coerceIn(0f, 1f)) }
+            ) {
+                trailingContent()
+            }
+        }
     }
 }
 
-/**
- * 2-Column Track Card for Grid view (NO quality badges, NO play button on cover).
- */
 @Composable
-private fun TrackGridCard(
-    track: JellyfinItem,
-    isPlaying: Boolean,
-    onPlay: () -> Unit,
-    modifier: Modifier = Modifier
+private fun AdaptiveAlbumPairRow(
+    pair: List<JellyfinItem>,
+    gridProgress: Float,
+    colWidth: Dp,
+    availableWidth: Dp,
+    playbackState: PlaybackState,
+    getTracksForAlbum: (JellyfinItem) -> List<JellyfinItem>,
+    onSelectAlbum: (JellyfinItem) -> Unit,
+    onPlayAlbum: (List<JellyfinItem>) -> Unit
 ) {
     val client = JellyMusicApp.instance.jellyfinClient
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onPlay() }
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .background(AppleSurface)
-                .border(1.dp, AppleBorder, RoundedCornerShape(14.dp))
-        ) {
-            AsyncImage(
-                model = client.getArtworkUrl(track.id, maxWidth = 300),
-                contentDescription = track.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+    val alb0 = pair[0]
+    val trks0 = remember(alb0) { getTracksForAlbum(alb0) }
+    val isPlaying0 = playbackState.currentTrack?.let { trk ->
+        trk.album?.equals(alb0.name, ignoreCase = true) == true
+    } == true && playbackState.isPlaying
 
-            if (isPlaying) {
+    val alb1 = pair.getOrNull(1)
+    val trks1 = alb1?.let { remember(it) { getTracksForAlbum(it) } } ?: emptyList()
+    val isPlaying1 = alb1?.let { a1 ->
+        playbackState.currentTrack?.let { trk ->
+            trk.album?.equals(a1.name, ignoreCase = true) == true
+        } == true && playbackState.isPlaying
+    } ?: false
+
+    AdaptivePairContainer(
+        hasB = alb1 != null,
+        gridProgress = gridProgress,
+        colWidth = colWidth,
+        availableWidth = availableWidth
+    ) { itemWidth, itemHeight, itemBX, itemBY ->
+        // Item A
+        AdaptiveLibraryItem(
+            modifier = Modifier,
+            artworkUrl = client.getArtworkUrl(alb0.id, maxWidth = 320),
+            title = alb0.name,
+            subtitle = if (gridProgress > 0.4f) alb0.artistName else "${alb0.artistName} • ${trks0.size} brani",
+            isPlaying = isPlaying0,
+            gridProgress = gridProgress,
+            itemWidth = itemWidth,
+            itemHeight = itemHeight,
+            colWidth = colWidth,
+            totalWidth = availableWidth,
+            trailingWidth = 42.dp,
+            onClick = { onSelectAlbum(alb0) },
+            trailingContent = {
+                IconButton(
+                    onClick = { if (trks0.isNotEmpty()) onPlayAlbum(trks0) },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Riproduci",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        )
+
+        // Item B
+        if (alb1 != null) {
+            AdaptiveLibraryItem(
+                modifier = Modifier.offset(x = itemBX, y = itemBY),
+                artworkUrl = client.getArtworkUrl(alb1.id, maxWidth = 320),
+                title = alb1.name,
+                subtitle = if (gridProgress > 0.4f) alb1.artistName else "${alb1.artistName} • ${trks1.size} brani",
+                isPlaying = isPlaying1,
+                gridProgress = gridProgress,
+                itemWidth = itemWidth,
+                itemHeight = itemHeight,
+                colWidth = colWidth,
+                totalWidth = availableWidth,
+                trailingWidth = 42.dp,
+                onClick = { onSelectAlbum(alb1) },
+                trailingContent = {
+                    IconButton(
+                        onClick = { if (trks1.isNotEmpty()) onPlayAlbum(trks1) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Riproduci",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveTrackPairRow(
+    pair: List<JellyfinItem>,
+    gridProgress: Float,
+    colWidth: Dp,
+    availableWidth: Dp,
+    playbackState: PlaybackState,
+    onPlay: (JellyfinItem) -> Unit,
+    onToggleFavorite: (JellyfinItem) -> Unit,
+    onAddToPlaylist: (JellyfinItem) -> Unit
+) {
+    val client = JellyMusicApp.instance.jellyfinClient
+    val trk0 = pair[0]
+    val isPlaying0 = playbackState.currentTrack?.id == trk0.id && playbackState.isPlaying
+
+    val trk1 = pair.getOrNull(1)
+    val isPlaying1 = trk1?.let { playbackState.currentTrack?.id == it.id && playbackState.isPlaying } ?: false
+
+    AdaptivePairContainer(
+        hasB = trk1 != null,
+        gridProgress = gridProgress,
+        colWidth = colWidth,
+        availableWidth = availableWidth
+    ) { itemWidth, itemHeight, itemBX, itemBY ->
+        // Item A
+        AdaptiveLibraryItem(
+            modifier = Modifier,
+            artworkUrl = client.getArtworkUrl(trk0.id, maxWidth = 320),
+            title = trk0.name,
+            subtitle = if (gridProgress > 0.4f) trk0.artistName else "${trk0.artistName} • ${trk0.album ?: "Singolo"}",
+            isPlaying = isPlaying0,
+            gridProgress = gridProgress,
+            itemWidth = itemWidth,
+            itemHeight = itemHeight,
+            colWidth = colWidth,
+            totalWidth = availableWidth,
+            trailingWidth = 76.dp,
+            onClick = { onPlay(trk0) },
+            trailingContent = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    IconButton(
+                        onClick = { onToggleFavorite(trk0) },
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (trk0.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Preferito",
+                            tint = if (trk0.isFavorite) Color.White else AppleTextMuted.copy(alpha = 0.6f),
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onAddToPlaylist(trk0) },
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlaylistAdd,
+                            contentDescription = "Aggiungi a playlist",
+                            tint = AppleTextMuted.copy(alpha = 0.6f),
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                }
+            }
+        )
+
+        // Item B
+        if (trk1 != null) {
+            AdaptiveLibraryItem(
+                modifier = Modifier.offset(x = itemBX, y = itemBY),
+                artworkUrl = client.getArtworkUrl(trk1.id, maxWidth = 320),
+                title = trk1.name,
+                subtitle = if (gridProgress > 0.4f) trk1.artistName else "${trk1.artistName} • ${trk1.album ?: "Singolo"}",
+                isPlaying = isPlaying1,
+                gridProgress = gridProgress,
+                itemWidth = itemWidth,
+                itemHeight = itemHeight,
+                colWidth = colWidth,
+                totalWidth = availableWidth,
+                trailingWidth = 76.dp,
+                onClick = { onPlay(trk1) },
+                trailingContent = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        IconButton(
+                            onClick = { onToggleFavorite(trk1) },
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (trk1.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Preferito",
+                                tint = if (trk1.isFavorite) Color.White else AppleTextMuted.copy(alpha = 0.6f),
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { onAddToPlaylist(trk1) },
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlaylistAdd,
+                                contentDescription = "Aggiungi a playlist",
+                                tint = AppleTextMuted.copy(alpha = 0.6f),
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdaptivePlaylistPairRow(
+    pair: List<JellyfinItem>,
+    gridProgress: Float,
+    colWidth: Dp,
+    availableWidth: Dp,
+    onOpenPlaylist: (JellyfinItem) -> Unit
+) {
+    val client = JellyMusicApp.instance.jellyfinClient
+    val pl0 = pair[0]
+    val pl1 = pair.getOrNull(1)
+
+    AdaptivePairContainer(
+        hasB = pl1 != null,
+        gridProgress = gridProgress,
+        colWidth = colWidth,
+        availableWidth = availableWidth
+    ) { itemWidth, itemHeight, itemBX, itemBY ->
+        // Item A
+        AdaptiveLibraryItem(
+            modifier = Modifier,
+            artworkUrl = client.getArtworkUrl(pl0.id, maxWidth = 320),
+            title = pl0.name,
+            subtitle = "Playlist Jellyfin",
+            isPlaying = false,
+            gridProgress = gridProgress,
+            itemWidth = itemWidth,
+            itemHeight = itemHeight,
+            colWidth = colWidth,
+            totalWidth = availableWidth,
+            trailingWidth = 32.dp,
+            onClick = { onOpenPlaylist(pl0) },
+            trailingContent = {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xB3000000))
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                        .padding(end = 4.dp)
+                        .size(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    AnimatedEqualizer()
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = AppleTextMuted.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = track.name,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = track.artistName,
-            color = AppleTextMuted,
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
 
-/**
- * 2-Column Playlist Card with real Jellyfin artwork (NO play button on cover).
- */
-@Composable
-private fun PlaylistGridCard(
-    playlist: JellyfinItem,
-    onClick: () -> Unit,
-    onQuickPlay: () -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    val client = JellyMusicApp.instance.jellyfinClient
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .background(AppleSurface)
-                .border(1.dp, AppleBorder, RoundedCornerShape(14.dp))
-        ) {
-            AsyncImage(
-                model = client.getArtworkUrl(playlist.id, maxWidth = 300),
-                contentDescription = playlist.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+        // Item B
+        if (pl1 != null) {
+            AdaptiveLibraryItem(
+                modifier = Modifier.offset(x = itemBX, y = itemBY),
+                artworkUrl = client.getArtworkUrl(pl1.id, maxWidth = 320),
+                title = pl1.name,
+                subtitle = "Playlist Jellyfin",
+                isPlaying = false,
+                gridProgress = gridProgress,
+                itemWidth = itemWidth,
+                itemHeight = itemHeight,
+                colWidth = colWidth,
+                totalWidth = availableWidth,
+                trailingWidth = 32.dp,
+                onClick = { onOpenPlaylist(pl1) },
+                trailingContent = {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = AppleTextMuted.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = playlist.name,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = "Playlist Jellyfin",
-            color = AppleTextMuted,
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 
