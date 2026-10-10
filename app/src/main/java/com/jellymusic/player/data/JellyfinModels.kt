@@ -113,7 +113,10 @@ data class LyricPhrase(
     val endMs: Long = 0L,
     val spans: List<LyricSpan> = emptyList(),
     val words: List<LyricWord> = emptyList()
-)
+) {
+    val hasSyllables: Boolean
+        get() = words.isNotEmpty() && (words.size > 1 || (words.size == 1 && (words[0].syllables.size > 1 || !words[0].text.trim().contains(" "))))
+}
 
 @Serializable
 data class LyricLineDto(
@@ -129,7 +132,7 @@ data class LyricLineDto(
     val endMs: Long
         get() = (endTicks ?: 0L) / 10_000L
     val hasSyllables: Boolean
-        get() = words.isNotEmpty() || spans.isNotEmpty()
+        get() = words.isNotEmpty() && (words.size > 1 || (words.size == 1 && (words[0].syllables.size > 1 || !words[0].text.trim().contains(" "))))
     val isBgAbove: Boolean
         get() = backgroundVoice != null && backgroundVoice.startMs < startMs
     val earliestStartMs: Long

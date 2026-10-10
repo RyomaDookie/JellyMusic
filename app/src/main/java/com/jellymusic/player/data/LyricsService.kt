@@ -170,7 +170,7 @@ class LyricsService(
     companion object {
         private val P_REGEX = Regex("""<p\b([^>]*)>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
         private val ATTR_REGEX = Regex("""([a-zA-Z0-9_:-]+)=["']([^"']*)["']""")
-        private val SPAN_REGEX = Regex("""<span\b([^>]*)>((?:(?!<span).)*?)</span>(\s*)""", RegexOption.DOT_MATCHES_ALL)
+        private val SPAN_REGEX = Regex("""<span\b([^>]*)>((?:(?!<span).)*?)</span>((?:\s|<br\s*/?>)*)""", RegexOption.DOT_MATCHES_ALL)
         private val HTML_TAG_REGEX = Regex("""<[^>]*>""")
 
         fun parseTtml(ttml: String): List<LyricLineDto> {
@@ -331,19 +331,15 @@ class LyricsService(
         ): Triple<String, List<LyricSpan>, List<LyricWord>> {
             val spanMatches = SPAN_REGEX.findAll(content).toList()
             if (spanMatches.isEmpty()) {
-                var clean = content.replace(HTML_TAG_REGEX, "")
+                var clean = content.replace(Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE), "\n")
+                clean = clean.replace(HTML_TAG_REGEX, "")
                 clean = unescapeXml(clean)
                 clean = clean.replace(HTML_TAG_REGEX, "")
                 if (stripParens) {
                     clean = clean.replace("(", "").replace(")", "")
                 }
                 clean = clean.trim()
-                if (clean.isNotEmpty()) {
-                    val span = LyricSpan(text = clean, startMs = fallbackBeginMs, endMs = fallbackEndMs)
-                    val word = LyricWord(text = clean, startMs = fallbackBeginMs, endMs = fallbackEndMs, syllables = listOf(span))
-                    return Triple(clean, listOf(span), listOf(word))
-                }
-                return Triple("", emptyList(), emptyList())
+                return Triple(clean, emptyList(), emptyList())
             }
 
             val rawSpans = mutableListOf<Pair<LyricSpan, Boolean>>()
@@ -364,12 +360,14 @@ class LyricsService(
                 val sEndMs = sEndStr?.let { parseTimeMs(it) } ?: fallbackEndMs
 
                 // Strip ANY HTML tags inside spanInner or unescaped text
-                var rawText = spanInner.replace(HTML_TAG_REGEX, "")
+                var rawText = spanInner.replace(Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE), "\n")
+                rawText = rawText.replace(HTML_TAG_REGEX, "")
                 rawText = unescapeXml(rawText).replace(HTML_TAG_REGEX, "")
                 if (stripParens) {
                     rawText = rawText.replace("(", "").replace(")", "")
                 }
-                val hasSpace = trailingSpace.isNotEmpty() || rawText.endsWith(" ")
+                val hasNewline = trailingSpace.contains("<br", ignoreCase = true) || rawText.contains("\n")
+                val hasSpace = hasNewline || trailingSpace.isNotEmpty() || rawText.endsWith(" ")
                 val cleanText = rawText.replace(HTML_TAG_REGEX, "").trim()
 
                 if (cleanText.isNotEmpty()) {
@@ -380,8 +378,31 @@ class LyricsService(
                     )
                     rawSpans.add(span to hasSpace)
                     textBuilder.append(cleanText)
-                    if (hasSpace) textBuilder.append(" ")
+                    if (hasNewline) textBuilder.append("\n")
+                    else if (hasSpace) textBuilder.append(" ")
                 }
+            }
+
+            val finalFullText = textBuilder.toString()
+                .replace(HTML_TAG_REGEX, "")
+                .trim()
+
+            if (rawSpans.isEmpty()) {
+                return Triple(finalFullText, emptyList(), emptyList())
+            }
+
+            // Distinguish syllable-by-syllable from phrase-by-phrase:
+            // 1. If only 1 span and it contains spaces (a full multi-word phrase): phrase-by-phrase
+            // 2. If multiple spans, but all spans have the same start time (e.g. multiple lines of a stanza sharing line timestamp): phrase-by-phrase
+            val distinctStartTimes = rawSpans.map { it.first.startMs }.distinct().size
+            val isGenuineSyllables = when {
+                rawSpans.size == 1 -> !rawSpans[0].first.text.trim().contains(" ") && (rawSpans[0].first.endMs > rawSpans[0].first.startMs)
+                distinctStartTimes <= 1 -> false
+                else -> true
+            }
+
+            if (!isGenuineSyllables) {
+                return Triple(finalFullText, emptyList(), emptyList())
             }
 
             // Group spans into atomic words for natural FlowRow wrapping
@@ -419,9 +440,6 @@ class LyricsService(
                 }
             }
 
-            val finalFullText = textBuilder.toString()
-                .replace(HTML_TAG_REGEX, "")
-                .trim()
             return Triple(finalFullText, rawSpans.map { it.first }, words)
         }
 

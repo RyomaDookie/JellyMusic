@@ -2124,7 +2124,7 @@ private fun BackgroundVoiceRow(
     playTimeMs: State<Long>,
     isActiveLine: Boolean
 ) {
-    if (isActiveLine && phrase.words.isNotEmpty()) {
+    if (isActiveLine && phrase.hasSyllables) {
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),

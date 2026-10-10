@@ -1,7 +1,7 @@
 # Graph Report - jellyfin-player  (2026-10-11)
 
 ## Corpus Check
-- 25 files · ~29,524 words
+- 25 files · ~29,640 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 19 file(s) not represented in the graph (top: .xml 12, .properties 2, (none) 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5f900d23`
+- Built from commit: `ad698376`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
