@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         hideStatusBar()
+        enableHighRefreshRate()
 
         setContent {
             val app = JellyMusicApp.instance
@@ -125,12 +126,46 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hideStatusBar()
+        enableHighRefreshRate()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             hideStatusBar()
+            enableHighRefreshRate()
+        }
+    }
+
+    private fun enableHighRefreshRate() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            try {
+                val display = display ?: return
+                val modes = display.supportedModes
+                val highestRefreshRateMode = modes.maxByOrNull { it.refreshRate }
+                if (highestRefreshRateMode != null) {
+                    val params = window.attributes
+                    params.preferredDisplayModeId = highestRefreshRateMode.modeId
+                    @Suppress("DEPRECATION")
+                    params.preferredRefreshRate = highestRefreshRateMode.refreshRate
+                    window.attributes = params
+                }
+            } catch (_: Exception) {}
+        } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            try {
+                @Suppress("DEPRECATION")
+                val windowManager = getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager
+                val display = windowManager?.defaultDisplay
+                val modes = display?.supportedModes
+                val highestRefreshRateMode = modes?.maxByOrNull { it.refreshRate }
+                if (highestRefreshRateMode != null) {
+                    val params = window.attributes
+                    params.preferredDisplayModeId = highestRefreshRateMode.modeId
+                    @Suppress("DEPRECATION")
+                    params.preferredRefreshRate = highestRefreshRateMode.refreshRate
+                    window.attributes = params
+                }
+            } catch (_: Exception) {}
         }
     }
 

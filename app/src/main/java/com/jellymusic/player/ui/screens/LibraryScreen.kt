@@ -129,7 +129,7 @@ fun LibraryScreen(
 
     var selectedCategory by remember { mutableStateOf(LibraryCategory.ALBUMS) }
     var isGridView by remember { mutableStateOf(true) }
-    val gridProgress by animateFloatAsState(
+    val gridProgressState = animateFloatAsState(
         targetValue = if (isGridView) 1f else 0f,
         animationSpec = tween(
             durationMillis = 550,
@@ -137,6 +137,7 @@ fun LibraryScreen(
         ),
         label = "gridMorph"
     )
+    val gridProgressProvider: () -> Float = { gridProgressState.value }
 
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -789,7 +790,7 @@ fun LibraryScreen(
                                 val alb1 = pair.getOrNull(1)
                                 AdaptiveAlbumPairRow(
                                     pair = pair,
-                                    gridProgress = gridProgress,
+                                    gridProgressProvider = gridProgressProvider,
                                     colWidth = colWidth,
                                     availableWidth = availableWidth,
                                     playbackState = playbackState,
@@ -815,7 +816,7 @@ fun LibraryScreen(
                             ) { _, pair ->
                                 AdaptiveTrackPairRow(
                                     pair = pair,
-                                    gridProgress = gridProgress,
+                                    gridProgressProvider = gridProgressProvider,
                                     colWidth = colWidth,
                                     availableWidth = availableWidth,
                                     playbackState = playbackState,
@@ -862,7 +863,7 @@ fun LibraryScreen(
                             ) { _, pair ->
                                 AdaptivePlaylistPairRow(
                                     pair = pair,
-                                    gridProgress = gridProgress,
+                                    gridProgressProvider = gridProgressProvider,
                                     colWidth = colWidth,
                                     availableWidth = availableWidth,
                                     onOpenPlaylist = { pl ->
@@ -891,7 +892,7 @@ fun LibraryScreen(
                             ) { _, pair ->
                                 AdaptiveTrackPairRow(
                                     pair = pair,
-                                    gridProgress = gridProgress,
+                                    gridProgressProvider = gridProgressProvider,
                                     colWidth = colWidth,
                                     availableWidth = availableWidth,
                                     playbackState = playbackState,
@@ -1053,11 +1054,12 @@ private fun lerpSp(start: TextUnit, stop: TextUnit, fraction: Float): TextUnit =
 @Composable
 private fun AdaptivePairContainer(
     hasB: Boolean,
-    gridProgress: Float,
+    gridProgressProvider: () -> Float,
     colWidth: Dp,
     availableWidth: Dp,
-    content: @Composable (itemWidth: Dp, itemHeight: Dp, itemBX: Dp, itemBY: Dp) -> Unit
+    content: @Composable (gridProgress: Float, itemWidth: Dp, itemHeight: Dp, itemBX: Dp, itemBY: Dp) -> Unit
 ) {
+    val gridProgress = gridProgressProvider()
     val listRowHeight = 66.dp
     val gridRowHeight = colWidth + 52.dp
     val colGap = 14.dp
@@ -1075,7 +1077,7 @@ private fun AdaptivePairContainer(
             .padding(horizontal = 20.dp, vertical = lerpDp(1.dp, 6.dp, gridProgress))
             .height(totalRowHeight)
     ) {
-        content(itemWidth, itemHeight, itemBX, itemBY)
+        content(gridProgress, itemWidth, itemHeight, itemBX, itemBY)
     }
 }
 
@@ -1167,7 +1169,7 @@ private fun AdaptiveLibraryItem(
 @Composable
 private fun AdaptiveAlbumPairRow(
     pair: List<JellyfinItem>,
-    gridProgress: Float,
+    gridProgressProvider: () -> Float,
     colWidth: Dp,
     availableWidth: Dp,
     playbackState: PlaybackState,
@@ -1191,10 +1193,10 @@ private fun AdaptiveAlbumPairRow(
 
     AdaptivePairContainer(
         hasB = alb1 != null,
-        gridProgress = gridProgress,
+        gridProgressProvider = gridProgressProvider,
         colWidth = colWidth,
         availableWidth = availableWidth
-    ) { itemWidth, itemHeight, itemBX, itemBY ->
+    ) { gridProgress, itemWidth, itemHeight, itemBX, itemBY ->
         // Item A
         AdaptiveLibraryItem(
             modifier = Modifier,
@@ -1260,7 +1262,7 @@ private fun AdaptiveAlbumPairRow(
 @Composable
 private fun AdaptiveTrackPairRow(
     pair: List<JellyfinItem>,
-    gridProgress: Float,
+    gridProgressProvider: () -> Float,
     colWidth: Dp,
     availableWidth: Dp,
     playbackState: PlaybackState,
@@ -1277,10 +1279,10 @@ private fun AdaptiveTrackPairRow(
 
     AdaptivePairContainer(
         hasB = trk1 != null,
-        gridProgress = gridProgress,
+        gridProgressProvider = gridProgressProvider,
         colWidth = colWidth,
         availableWidth = availableWidth
-    ) { itemWidth, itemHeight, itemBX, itemBY ->
+    ) { gridProgress, itemWidth, itemHeight, itemBX, itemBY ->
         // Item A
         AdaptiveLibraryItem(
             modifier = Modifier,
@@ -1378,7 +1380,7 @@ private fun AdaptiveTrackPairRow(
 @Composable
 private fun AdaptivePlaylistPairRow(
     pair: List<JellyfinItem>,
-    gridProgress: Float,
+    gridProgressProvider: () -> Float,
     colWidth: Dp,
     availableWidth: Dp,
     onOpenPlaylist: (JellyfinItem) -> Unit
@@ -1389,10 +1391,10 @@ private fun AdaptivePlaylistPairRow(
 
     AdaptivePairContainer(
         hasB = pl1 != null,
-        gridProgress = gridProgress,
+        gridProgressProvider = gridProgressProvider,
         colWidth = colWidth,
         availableWidth = availableWidth
-    ) { itemWidth, itemHeight, itemBX, itemBY ->
+    ) { gridProgress, itemWidth, itemHeight, itemBX, itemBY ->
         // Item A
         AdaptiveLibraryItem(
             modifier = Modifier,
