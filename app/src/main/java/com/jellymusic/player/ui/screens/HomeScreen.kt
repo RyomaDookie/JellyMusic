@@ -415,12 +415,16 @@ fun HomeScreen(
                     }
                 }
                 item {
-                    AppleIn("recentCarousel", 6, seen) {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            itemsIndexed(recentTracks, key = { _, t -> "recent_${t.id}" }) { i, t ->
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        itemsIndexed(recentTracks, key = { _, t -> "recent_${t.id}" }) { i, t ->
+                            AppleIn(
+                                key = "recent_${t.id}",
+                                index = i.coerceAtMost(6),
+                                seen = seen
+                            ) {
                                 AppleTrackCard(
                                     track = t,
                                     isCurrent = playbackState.currentTrack?.id == t.id,

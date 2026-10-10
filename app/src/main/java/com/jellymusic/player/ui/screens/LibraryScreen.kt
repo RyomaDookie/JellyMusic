@@ -21,7 +21,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.layout.Arrangement
@@ -1057,27 +1060,32 @@ private fun AdaptivePairContainer(
     gridProgressProvider: () -> Float,
     colWidth: Dp,
     availableWidth: Dp,
-    content: @Composable (gridProgress: Float, itemWidth: Dp, itemHeight: Dp, itemBX: Dp, itemBY: Dp) -> Unit
+    content: @Composable () -> Unit
 ) {
-    val gridProgress = gridProgressProvider()
-    val listRowHeight = 66.dp
-    val gridRowHeight = colWidth + 52.dp
-    val colGap = 14.dp
-
-    val totalRowHeight = lerpDp(if (hasB) listRowHeight * 2 else listRowHeight, gridRowHeight, gridProgress)
-    val itemWidth = lerpDp(availableWidth, colWidth, gridProgress)
-    val itemHeight = lerpDp(listRowHeight, gridRowHeight, gridProgress)
-
-    val itemBX = lerpDp(0.dp, colWidth + colGap, gridProgress)
-    val itemBY = lerpDp(listRowHeight, 0.dp, gridProgress)
+    val density = LocalDensity.current
+    val listRowHeightPx = remember(density) { with(density) { 66.dp.roundToPx() } }
+    val gridRowHeightPx = remember(density, colWidth) { with(density) { (colWidth + 52.dp).roundToPx() } }
+    val listTotalHeightPx = remember(listRowHeightPx, hasB) { if (hasB) listRowHeightPx * 2 else listRowHeightPx }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = lerpDp(1.dp, 6.dp, gridProgress))
-            .height(totalRowHeight)
+            .padding(horizontal = 20.dp)
+            .layout { measurable, constraints ->
+                val p = gridProgressProvider()
+                val targetH = (listTotalHeightPx + (gridRowHeightPx - listTotalHeightPx) * p).toInt()
+                val placeable = measurable.measure(
+                    constraints.copy(
+                        minHeight = targetH,
+                        maxHeight = targetH
+                    )
+                )
+                layout(placeable.width, targetH) {
+                    placeable.place(0, 0)
+                }
+            }
     ) {
-        content(gridProgress, itemWidth, itemHeight, itemBX, itemBY)
+        content()
     }
 }
 
@@ -1088,37 +1096,45 @@ private fun AdaptiveLibraryItem(
     title: String,
     subtitle: String,
     isPlaying: Boolean,
-    gridProgress: Float,
-    itemWidth: Dp,
-    itemHeight: Dp,
+    gridProgressProvider: () -> Float,
     colWidth: Dp,
-    totalWidth: Dp,
+    availableWidth: Dp,
     trailingWidth: Dp = 0.dp,
     onClick: () -> Unit,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
-    val listArtSize = 50.dp
-    val artSize = lerpDp(listArtSize, colWidth, gridProgress)
-    val artY = lerpDp(8.dp, 0.dp, gridProgress)
-    val cornerRadius = lerpDp(10.dp, 14.dp, gridProgress)
-
-    val textX = lerpDp(listArtSize + 14.dp, 0.dp, gridProgress)
-    val textY = lerpDp(14.dp, colWidth + 8.dp, gridProgress)
-    val maxTextWidth = (totalWidth - (listArtSize + 14.dp) - trailingWidth).coerceAtLeast(60.dp)
-    val textWidth = lerpDp(maxTextWidth, colWidth, gridProgress)
+    val density = LocalDensity.current
+    val colWidthPx = remember(density, colWidth) { with(density) { colWidth.toPx() } }
+    val listArtSizePx = remember(density) { with(density) { 50.dp.toPx() } }
+    val listArtYPx = remember(density) { with(density) { 8.dp.toPx() } }
+    val textXOffsetPx = remember(density) { with(density) { (50.dp + 14.dp).toPx() } }
+    val textYListPx = remember(density) { with(density) { 14.dp.toPx() } }
+    val textYGridPx = remember(density, colWidth) { with(density) { (colWidth + 8.dp).toPx() } }
+    val maxTextWidthPx = remember(density, availableWidth, trailingWidth) {
+        with(density) { (availableWidth - 64.dp - trailingWidth).toPx().coerceAtLeast(60.dp.toPx()) }
+    }
 
     Box(
         modifier = modifier
-            .size(itemWidth, itemHeight)
-            .clip(RoundedCornerShape(12.dp))
+            .fillMaxWidth()
             .clickable { onClick() }
     ) {
-        // Artwork Box with clean rounded corner - NO white border and NO visualizer badge on cover
+        // Artwork Box (sized once at colWidth; scaled, translated and clipped smoothly on GPU)
         Box(
             modifier = Modifier
-                .offset(x = 0.dp, y = artY)
-                .size(artSize)
-                .clip(RoundedCornerShape(cornerRadius))
+                .size(colWidth)
+                .graphicsLayer {
+                    val p = gridProgressProvider()
+                    val targetSize = listArtSizePx + (colWidthPx - listArtSizePx) * p
+                    val scale = targetSize / colWidthPx
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = TransformOrigin(0f, 0f)
+                    translationY = listArtYPx * (1f - p)
+                    val radiusPx = (10.dp.toPx() + 4.dp.toPx() * p)
+                    shape = RoundedCornerShape(radiusPx)
+                    clip = true
+                }
                 .background(AppleSurface)
         ) {
             AsyncImage(
@@ -1129,16 +1145,27 @@ private fun AdaptiveLibraryItem(
             )
         }
 
-        // Title & Artist Column smoothly traveling from bottom to right
+        // Title & Artist Column (translated smoothly from beside artwork to under artwork)
         Column(
             modifier = Modifier
-                .offset(x = textX, y = textY)
-                .width(textWidth)
+                .layout { measurable, constraints ->
+                    val p = gridProgressProvider()
+                    val targetW = (maxTextWidthPx + (colWidthPx - maxTextWidthPx) * p).toInt()
+                    val placeable = measurable.measure(constraints.copy(minWidth = targetW, maxWidth = targetW))
+                    layout(targetW, placeable.height) {
+                        placeable.place(0, 0)
+                    }
+                }
+                .graphicsLayer {
+                    val p = gridProgressProvider()
+                    translationX = textXOffsetPx * (1f - p)
+                    translationY = textYListPx * (1f - p) + textYGridPx * p
+                }
         ) {
             Text(
                 text = title,
                 color = if (isPlaying) Color.White else Color(0xFFF0F0F0),
-                fontSize = lerpSp(15.sp, 14.sp, gridProgress),
+                fontSize = 14.5.sp,
                 fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1147,18 +1174,22 @@ private fun AdaptiveLibraryItem(
             Text(
                 text = subtitle,
                 color = AppleTextMuted,
-                fontSize = lerpSp(13.sp, 12.sp, gridProgress),
+                fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        // Trailing actions - smoothly synchronized fade
-        if (trailingContent != null && gridProgress < 0.6f) {
+        // Trailing actions (heart, duration, playlist, play button) fading out on GPU
+        if (trailingContent != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .graphicsLayer { alpha = (1f - gridProgress).coerceIn(0f, 1f) }
+                    .graphicsLayer {
+                        val p = gridProgressProvider()
+                        alpha = (1f - p * 2.2f).coerceIn(0f, 1f)
+                        translationX = with(density) { 16.dp.toPx() * p }
+                    }
             ) {
                 trailingContent()
             }
@@ -1191,24 +1222,27 @@ private fun AdaptiveAlbumPairRow(
         } == true && playbackState.isPlaying
     } ?: false
 
+    val density = LocalDensity.current
+    val listRowHeightPx = remember(density) { with(density) { 66.dp.toPx() } }
+    val colWidthPx = remember(density, colWidth) { with(density) { colWidth.toPx() } }
+    val colGapPx = remember(density) { with(density) { 14.dp.toPx() } }
+
     AdaptivePairContainer(
         hasB = alb1 != null,
         gridProgressProvider = gridProgressProvider,
         colWidth = colWidth,
         availableWidth = availableWidth
-    ) { gridProgress, itemWidth, itemHeight, itemBX, itemBY ->
+    ) {
         // Item A
         AdaptiveLibraryItem(
             modifier = Modifier,
             artworkUrl = client.getArtworkUrl(alb0.id, maxWidth = 320),
             title = alb0.name,
-            subtitle = if (gridProgress > 0.4f) alb0.artistName else "${alb0.artistName} • $trackCountA brani",
+            subtitle = alb0.artistName,
             isPlaying = isPlaying0,
-            gridProgress = gridProgress,
-            itemWidth = itemWidth,
-            itemHeight = itemHeight,
+            gridProgressProvider = gridProgressProvider,
             colWidth = colWidth,
-            totalWidth = availableWidth,
+            availableWidth = availableWidth,
             trailingWidth = 42.dp,
             onClick = { onSelectAlbum(alb0) },
             trailingContent = {
@@ -1229,16 +1263,18 @@ private fun AdaptiveAlbumPairRow(
         // Item B
         if (alb1 != null) {
             AdaptiveLibraryItem(
-                modifier = Modifier.offset(x = itemBX, y = itemBY),
+                modifier = Modifier.graphicsLayer {
+                    val p = gridProgressProvider()
+                    translationX = (colWidthPx + colGapPx) * p
+                    translationY = listRowHeightPx * (1f - p)
+                },
                 artworkUrl = client.getArtworkUrl(alb1.id, maxWidth = 320),
                 title = alb1.name,
-                subtitle = if (gridProgress > 0.4f) alb1.artistName else "${alb1.artistName} • $trackCountB brani",
+                subtitle = alb1.artistName,
                 isPlaying = isPlaying1,
-                gridProgress = gridProgress,
-                itemWidth = itemWidth,
-                itemHeight = itemHeight,
+                gridProgressProvider = gridProgressProvider,
                 colWidth = colWidth,
-                totalWidth = availableWidth,
+                availableWidth = availableWidth,
                 trailingWidth = 42.dp,
                 onClick = { onSelectAlbum(alb1) },
                 trailingContent = {
@@ -1277,24 +1313,27 @@ private fun AdaptiveTrackPairRow(
     val trk1 = pair.getOrNull(1)
     val isPlaying1 = trk1?.let { playbackState.currentTrack?.id == it.id && playbackState.isPlaying } ?: false
 
+    val density = LocalDensity.current
+    val listRowHeightPx = remember(density) { with(density) { 66.dp.toPx() } }
+    val colWidthPx = remember(density, colWidth) { with(density) { colWidth.toPx() } }
+    val colGapPx = remember(density) { with(density) { 14.dp.toPx() } }
+
     AdaptivePairContainer(
         hasB = trk1 != null,
         gridProgressProvider = gridProgressProvider,
         colWidth = colWidth,
         availableWidth = availableWidth
-    ) { gridProgress, itemWidth, itemHeight, itemBX, itemBY ->
+    ) {
         // Item A
         AdaptiveLibraryItem(
             modifier = Modifier,
             artworkUrl = client.getArtworkUrl(trk0.id, maxWidth = 320),
             title = trk0.name,
-            subtitle = if (gridProgress > 0.4f) trk0.artistName else "${trk0.artistName} • ${trk0.album ?: "Singolo"}",
+            subtitle = trk0.artistName,
             isPlaying = isPlaying0,
-            gridProgress = gridProgress,
-            itemWidth = itemWidth,
-            itemHeight = itemHeight,
+            gridProgressProvider = gridProgressProvider,
             colWidth = colWidth,
-            totalWidth = availableWidth,
+            availableWidth = availableWidth,
             trailingWidth = 76.dp,
             onClick = { onPlay(trk0) },
             trailingContent = {
@@ -1331,16 +1370,18 @@ private fun AdaptiveTrackPairRow(
         // Item B
         if (trk1 != null) {
             AdaptiveLibraryItem(
-                modifier = Modifier.offset(x = itemBX, y = itemBY),
+                modifier = Modifier.graphicsLayer {
+                    val p = gridProgressProvider()
+                    translationX = (colWidthPx + colGapPx) * p
+                    translationY = listRowHeightPx * (1f - p)
+                },
                 artworkUrl = client.getArtworkUrl(trk1.id, maxWidth = 320),
                 title = trk1.name,
-                subtitle = if (gridProgress > 0.4f) trk1.artistName else "${trk1.artistName} • ${trk1.album ?: "Singolo"}",
+                subtitle = trk1.artistName,
                 isPlaying = isPlaying1,
-                gridProgress = gridProgress,
-                itemWidth = itemWidth,
-                itemHeight = itemHeight,
+                gridProgressProvider = gridProgressProvider,
                 colWidth = colWidth,
-                totalWidth = availableWidth,
+                availableWidth = availableWidth,
                 trailingWidth = 76.dp,
                 onClick = { onPlay(trk1) },
                 trailingContent = {
@@ -1389,12 +1430,17 @@ private fun AdaptivePlaylistPairRow(
     val pl0 = pair[0]
     val pl1 = pair.getOrNull(1)
 
+    val density = LocalDensity.current
+    val listRowHeightPx = remember(density) { with(density) { 66.dp.toPx() } }
+    val colWidthPx = remember(density, colWidth) { with(density) { colWidth.toPx() } }
+    val colGapPx = remember(density) { with(density) { 14.dp.toPx() } }
+
     AdaptivePairContainer(
         hasB = pl1 != null,
         gridProgressProvider = gridProgressProvider,
         colWidth = colWidth,
         availableWidth = availableWidth
-    ) { gridProgress, itemWidth, itemHeight, itemBX, itemBY ->
+    ) {
         // Item A
         AdaptiveLibraryItem(
             modifier = Modifier,
@@ -1402,11 +1448,9 @@ private fun AdaptivePlaylistPairRow(
             title = pl0.name,
             subtitle = "Playlist Jellyfin",
             isPlaying = false,
-            gridProgress = gridProgress,
-            itemWidth = itemWidth,
-            itemHeight = itemHeight,
+            gridProgressProvider = gridProgressProvider,
             colWidth = colWidth,
-            totalWidth = availableWidth,
+            availableWidth = availableWidth,
             trailingWidth = 32.dp,
             onClick = { onOpenPlaylist(pl0) },
             trailingContent = {
@@ -1429,16 +1473,18 @@ private fun AdaptivePlaylistPairRow(
         // Item B
         if (pl1 != null) {
             AdaptiveLibraryItem(
-                modifier = Modifier.offset(x = itemBX, y = itemBY),
+                modifier = Modifier.graphicsLayer {
+                    val p = gridProgressProvider()
+                    translationX = (colWidthPx + colGapPx) * p
+                    translationY = listRowHeightPx * (1f - p)
+                },
                 artworkUrl = client.getArtworkUrl(pl1.id, maxWidth = 320),
                 title = pl1.name,
                 subtitle = "Playlist Jellyfin",
                 isPlaying = false,
-                gridProgress = gridProgress,
-                itemWidth = itemWidth,
-                itemHeight = itemHeight,
+                gridProgressProvider = gridProgressProvider,
                 colWidth = colWidth,
-                totalWidth = availableWidth,
+                availableWidth = availableWidth,
                 trailingWidth = 32.dp,
                 onClick = { onOpenPlaylist(pl1) },
                 trailingContent = {

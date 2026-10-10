@@ -49,6 +49,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -196,7 +197,6 @@ fun MainNavigationHost(
         val screenWidth = maxWidth
         val screenHeight = maxHeight
         val density = LocalDensity.current
-        val p = animProgress.value.coerceIn(0f, 1f)
 
         val springSpec = spring<Float>(dampingRatio = 0.9431f, stiffness = 120f)
 
@@ -212,23 +212,24 @@ fun MainNavigationHost(
             }
         }
 
-        val smP = (p.coerceIn(0f, 1f)).let { it * it * (3f - 2f * it) }
-        val baseScale = 1.0f + (0.94f - 1.0f) * smP
-        val baseRadius = (24.dp * smP).coerceAtLeast(0.dp)
-        val scrimAlpha = (0.55f * smP).coerceIn(0f, 1f)
+        val isPlayerExpanded by remember {
+            derivedStateOf { animProgress.value > 0.01f }
+        }
 
-        val qNav = if (0.6f <= 0f) 1f else ((p - 0f) / 0.6f).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
-        val navTranslationY = with(density) { (qNav * 80.dp.toPx()) }
-
-        BackHandler(enabled = p > 0.01f) {
+        BackHandler(enabled = isPlayerExpanded) {
             collapsePlayer()
         }
 
         // Base Content Container (scales to 0.94, rounds to 24dp, dims by 0.55 matching Transition.dc.html)
+        // 100% GPU RenderNode transforms - ZERO recomposition during player drag/animation
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
+                    val p = animProgress.value.coerceIn(0f, 1f)
+                    val smP = p * p * (3f - 2f * p)
+                    val baseScale = 1.0f + (0.94f - 1.0f) * smP
+                    val baseRadius = (24.dp.toPx() * smP).coerceAtLeast(0f)
                     scaleX = baseScale
                     scaleY = baseScale
                     transformOrigin = TransformOrigin(0.5f, 0.4f)
@@ -243,28 +244,29 @@ fun MainNavigationHost(
                     .fillMaxSize()
                     .padding(bottom = 72.dp)
             ) {
+                val tabEase = remember { CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f) }
                 AnimatedContent(
                     targetState = activeTab,
                     transitionSpec = {
                         if (targetState > initialState) {
                             (slideInHorizontally(
-                                initialOffsetX = { (it * 0.25f).toInt() },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(260))).togetherWith(
+                                initialOffsetX = { (it * 0.20f).toInt() },
+                                animationSpec = tween(500, easing = tabEase)
+                            ) + fadeIn(animationSpec = tween(450, easing = tabEase))).togetherWith(
                                 slideOutHorizontally(
-                                    targetOffsetX = { (-it * 0.25f).toInt() },
-                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween(200))
+                                    targetOffsetX = { (-it * 0.20f).toInt() },
+                                    animationSpec = tween(500, easing = tabEase)
+                                ) + fadeOut(animationSpec = tween(350, easing = tabEase))
                             )
                         } else {
                             (slideInHorizontally(
-                                initialOffsetX = { (-it * 0.25f).toInt() },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(260))).togetherWith(
+                                initialOffsetX = { (-it * 0.20f).toInt() },
+                                animationSpec = tween(500, easing = tabEase)
+                            ) + fadeIn(animationSpec = tween(450, easing = tabEase))).togetherWith(
                                 slideOutHorizontally(
-                                    targetOffsetX = { (it * 0.25f).toInt() },
-                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween(200))
+                                    targetOffsetX = { (it * 0.20f).toInt() },
+                                    animationSpec = tween(500, easing = tabEase)
+                                ) + fadeOut(animationSpec = tween(350, easing = tabEase))
                             )
                         }
                     },
@@ -295,14 +297,17 @@ fun MainNavigationHost(
                 }
             }
 
-            // Dark dimming scrim matching Transition.dc.html brightness filter
-            if (scrimAlpha > 0.001f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = scrimAlpha))
-                )
-            }
+            // Dark dimming scrim matching Transition.dc.html brightness filter (RenderNode alpha - no recomposition)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val p = animProgress.value.coerceIn(0f, 1f)
+                        val smP = p * p * (3f - 2f * p)
+                        alpha = (0.55f * smP).coerceIn(0f, 1f)
+                    }
+                    .background(Color.Black)
+            )
         }
 
         // Bottom Navigation Bar (Transition.dc.html: navStyle with translateY(q(0, 0.6) * 80))
@@ -312,7 +317,9 @@ fun MainNavigationHost(
                 .fillMaxWidth()
                 .height(72.dp)
                 .graphicsLayer {
-                    translationY = navTranslationY
+                    val p = animProgress.value.coerceIn(0f, 1f)
+                    val qNav = if (p <= 0f) 0f else ((p - 0f) / 0.6f).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
+                    translationY = qNav * 80.dp.toPx()
                 }
                 .background(Color(0xF50D0D11))
         ) {
