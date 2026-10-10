@@ -1,6 +1,9 @@
 package com.jellymusic.player.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
@@ -205,6 +208,18 @@ fun PlayerScreen(
 
     var mode by remember { mutableStateOf(SheetMode.ART) }
     var lastContentMode by remember { mutableStateOf(SheetMode.LYRICS) }
+    var savedModeBeforeCollapse by remember { mutableStateOf<SheetMode?>(null) }
+
+    val handleCollapse: () -> Unit = {
+        coroutineScope.launch {
+            if (mode != SheetMode.ART) {
+                savedModeBeforeCollapse = mode
+                mode = SheetMode.ART
+                delay(120)
+            }
+            onCollapse()
+        }
+    }
 
     LaunchedEffect(mode) {
         if (mode != SheetMode.ART) {
@@ -395,12 +410,30 @@ fun PlayerScreen(
     LaunchedEffect(track.id, isLoadingLyrics, lyrics.size) {
         if (!isLoadingLyrics && lyrics.isEmpty() && mode == SheetMode.LYRICS) {
             mode = SheetMode.ART
+            savedModeBeforeCollapse = null
         }
     }
     LaunchedEffect(p < 0.2f) {
         if (p < 0.2f && mode != SheetMode.ART) {
+            if (savedModeBeforeCollapse == null) {
+                savedModeBeforeCollapse = mode
+            }
             mode = SheetMode.ART
         }
+    }
+
+    // Reopen inverse animation: when player completes expansion, smoothly restore lyrics/queue
+    LaunchedEffect(p >= 0.98f) {
+        if (p >= 0.98f && savedModeBeforeCollapse != null) {
+            val restoreMode = savedModeBeforeCollapse
+            savedModeBeforeCollapse = null
+            delay(60)
+            mode = restoreMode ?: SheetMode.ART
+        }
+    }
+
+    BackHandler(enabled = p > 0.01f && !showSpeedDialog) {
+        handleCollapse()
     }
 
     // Exact geometry calculations from Transition.dc.html
@@ -620,6 +653,18 @@ fun PlayerScreen(
                 }
             }
 
+        // Top Grab Handle (pill)
+        if (pillAlpha > 0.001f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = 10.dp)
+                    .size(width = 36.dp, height = 5.dp)
+                    .graphicsLayer { alpha = pillAlpha }
+                    .clip(RoundedCornerShape(2.5.dp))
+                    .background(Color.White.copy(alpha = 0.35f))
+            )
+        }
 
         // Mini Player Progress Line: anchored to the bottom edge of the container while fading out
         if (miniLineAlpha > 0.001f) {
@@ -791,7 +836,8 @@ fun PlayerScreen(
                             isPlaying = playbackState.isPlaying,
                             currentPositionMs = currentMs,
                             durationMs = durationMs,
-                            onSeek = { controller.seekTo(it) }
+                            onSeek = { controller.seekTo(it) },
+                            onCollapse = handleCollapse
                         )
                     } else if (currentMode == SheetMode.QUEUE) {
                         QueuePanel(
@@ -806,7 +852,8 @@ fun PlayerScreen(
                             },
                             onMoveItem = { from, to ->
                                 controller.moveQueueItem(from, to)
-                            }
+                            },
+                            onCollapse = handleCollapse
                         )
                     }
                 }
@@ -1109,7 +1156,10 @@ fun PlayerScreen(
                     icon = Icons.Rounded.ChatBubbleOutline,
                     isActive = mode == SheetMode.LYRICS,
                     enabled = hasLyrics && p > 0.6f,
-                    onClick = { mode = if (mode == SheetMode.LYRICS) SheetMode.ART else SheetMode.LYRICS }
+                    onClick = {
+                        savedModeBeforeCollapse = null
+                        mode = if (mode == SheetMode.LYRICS) SheetMode.ART else SheetMode.LYRICS
+                    }
                 )
 
                 // Playback Speed Button (Clean flat translucent pill, NO frosted blur when closed)
@@ -1154,7 +1204,10 @@ fun PlayerScreen(
                     icon = Icons.Rounded.FormatListBulleted,
                     isActive = mode == SheetMode.QUEUE,
                     enabled = p > 0.6f,
-                    onClick = { mode = if (mode == SheetMode.QUEUE) SheetMode.ART else SheetMode.QUEUE }
+                    onClick = {
+                        savedModeBeforeCollapse = null
+                        mode = if (mode == SheetMode.QUEUE) SheetMode.ART else SheetMode.QUEUE
+                    }
                 )
             }
         }
@@ -1177,12 +1230,12 @@ fun PlayerScreen(
 
     // Full player drag zone: covers header, pill, and down to the height of the cover art
     if (p > 0.01f && !showSpeedDialog) {
-        val dragHeight = lerpDp(fullTitleY - 8.dp, 100.dp, compactProgress)
+        val dragHeight = lerpDp(fullTitleY - 8.dp, 110.dp, compactProgress)
         Box(
             modifier = Modifier
                 .offset(x = 0.dp, y = 0.dp)
                 .size(width = screenWidth, height = dragHeight)
-                .pointerInput(travelDistPx, mode) {
+                .pointerInput(travelDistPx) {
                     val springSpec = spring<Float>(
                         dampingRatio = 0.9431f,
                         stiffness = 120f
@@ -1205,10 +1258,14 @@ fun PlayerScreen(
                             val dy = currentY - startY
                             if (!moved && kotlin.math.abs(dy) > touchSlop) {
                                 moved = true
+                                if (dy > 0 && mode != SheetMode.ART) {
+                                    savedModeBeforeCollapse = mode
+                                    mode = SheetMode.ART
+                                }
                             }
                             if (moved) {
                                 change.consume()
-                                val newP = (startP - dy / travelDistPx).coerceIn(0.02f, 1f)
+                                val newP = (startP - dy / travelDistPx).coerceIn(0f, 1f)
                                 coroutineScope.launch {
                                     animProgress.snapTo(newP)
                                 }
@@ -1222,9 +1279,9 @@ fun PlayerScreen(
 
                         if (!moved) {
                             if (startY <= with(density) { 70.dp.toPx() }) {
-                                onCollapse()
+                                handleCollapse()
                             } else if (mode != SheetMode.ART) {
-                                mode = SheetMode.ART
+                                handleCollapse()
                             }
                         } else {
                             val first = samples.first()
@@ -1235,6 +1292,10 @@ fun PlayerScreen(
                             val currentP = animProgress.value
                             val proj = currentP + vp * 0.18f
                             val target = if (proj > 0.5f) 1f else 0f
+                            if (target == 0f && mode != SheetMode.ART) {
+                                savedModeBeforeCollapse = mode
+                                mode = SheetMode.ART
+                            }
                             coroutineScope.launch {
                                 animProgress.animateTo(
                                     targetValue = target,
@@ -1280,7 +1341,7 @@ fun PlayerScreen(
                             }
                             if (moved) {
                                 change.consume()
-                                val newP = (startP - dy / travelDistPx).coerceIn(0f, 0.98f)
+                                val newP = (startP - dy / travelDistPx).coerceIn(0f, 1f)
                                 coroutineScope.launch {
                                     animProgress.snapTo(newP)
                                 }
@@ -1737,7 +1798,8 @@ private fun LyricsPanel(
     isPlaying: Boolean,
     currentPositionMs: Long,
     durationMs: Long,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    onCollapse: () -> Unit = {}
 ) {
     if (isLoading) {
         Box(
@@ -1837,12 +1899,29 @@ private fun LyricsPanel(
         }
     }
 
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y > 15f && source == NestedScrollSource.UserInput) {
+                    onCollapse()
+                    return available
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(top = 96.dp, bottom = 480.dp),
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(nestedScrollConnection)
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawWithContent {
                     drawContent()
@@ -2001,7 +2080,7 @@ private fun MainVoiceRow(
         }
     } else {
         Text(
-            text = line.text,
+            text = line.text.replace(Regex("<[^>]*>"), "").trim(),
             fontSize = 26.sp,
             fontWeight = if (isActiveLine) FontWeight.Bold else FontWeight.SemiBold,
             color = if (isActiveLine) Color.White else Color.White.copy(alpha = 0.35f),
@@ -2043,7 +2122,7 @@ private fun BackgroundVoiceRow(
         }
     } else {
         Text(
-            text = phrase.text,
+            text = phrase.text.replace(Regex("<[^>]*>"), "").trim(),
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = if (isActiveLine) Color.White else Color.White.copy(alpha = 0.35f),
@@ -2062,10 +2141,11 @@ private fun SyllableItem(
     fontWeight: FontWeight,
     lineHeight: androidx.compose.ui.unit.TextUnit
 ) {
+    val cleanText = remember(syllable.text) { syllable.text.replace(Regex("<[^>]*>"), "") }
     Box(contentAlignment = Alignment.CenterStart) {
         // Base muted text (un-sung state)
         Text(
-            text = syllable.text,
+            text = cleanText,
             fontSize = fontSize,
             fontWeight = fontWeight,
             color = Color.White.copy(alpha = 0.32f),
@@ -2098,7 +2178,7 @@ private fun SyllableItem(
                 }
             ) {
                 Text(
-                    text = syllable.text,
+                    text = cleanText,
                     fontSize = fontSize,
                     fontWeight = fontWeight,
                     color = Color.White,
@@ -2114,9 +2194,26 @@ private fun SyllableItem(
 private fun QueuePanel(
     playbackState: PlaybackState,
     onPlayIndex: (Int) -> Unit,
-    onMoveItem: (Int, Int) -> Unit
+    onMoveItem: (Int, Int) -> Unit,
+    onCollapse: () -> Unit = {}
 ) {
     val client = JellyMusicApp.instance.jellyfinClient
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y > 15f && source == NestedScrollSource.UserInput) {
+                    onCollapse()
+                    return available
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -2129,7 +2226,9 @@ private fun QueuePanel(
         )
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(playbackState.queue) { index, item ->

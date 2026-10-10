@@ -170,7 +170,8 @@ class LyricsService(
     companion object {
         private val P_REGEX = Regex("""<p\b([^>]*)>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
         private val ATTR_REGEX = Regex("""([a-zA-Z0-9_:-]+)=["']([^"']*)["']""")
-        private val SPAN_REGEX = Regex("""<span\b([^>]*)>(.*?)</span>(\s*)""", RegexOption.DOT_MATCHES_ALL)
+        private val SPAN_REGEX = Regex("""<span\b([^>]*)>((?:(?!<span).)*?)</span>(\s*)""", RegexOption.DOT_MATCHES_ALL)
+        private val HTML_TAG_REGEX = Regex("""<[^>]*>""")
 
         fun parseTtml(ttml: String): List<LyricLineDto> {
             val lines = mutableListOf<LyricLineDto>()
@@ -190,24 +191,48 @@ class LyricsService(
                 val pEndMs = pEndStr?.let { parseTimeMs(it) } ?: 0L
 
                 var currentContent = pContent
-                var backgroundVoice: LyricPhrase? = null
+                val bgPhrases = mutableListOf<LyricPhrase>()
 
-                // Extract any secondary vocal / ad-lib block marked with ttm:role="x-bg"
-                val bgExtracted = extractBgBlock(currentContent)
-                if (bgExtracted != null) {
-                    val (bgXml, remaining) = bgExtracted
-                    currentContent = remaining
+                // Extract all secondary vocal / ad-lib blocks marked with ttm:role="x-bg"
+                while (true) {
+                    val bgResult = extractBgBlock(currentContent) ?: break
+                    currentContent = bgResult.remainingContent
 
-                    val (bgText, bgSpans, bgWords) = parseSpansAndWords(bgXml, pBeginMs, pEndMs, stripParens = true)
+                    val fallbackBgStart = bgResult.bgBeginMs ?: pBeginMs
+                    val fallbackBgEnd = bgResult.bgEndMs ?: pEndMs
+
+                    val (bgText, bgSpans, bgWords) = parseSpansAndWords(
+                        bgResult.innerContent,
+                        fallbackBgStart,
+                        fallbackBgEnd,
+                        stripParens = true
+                    )
                     if (bgText.isNotBlank()) {
-                        val bgStart = bgSpans.firstOrNull()?.startMs ?: pBeginMs
-                        val bgEnd = bgSpans.lastOrNull()?.endMs ?: pEndMs
-                        backgroundVoice = LyricPhrase(
+                        val bgStart = bgSpans.firstOrNull()?.startMs ?: fallbackBgStart
+                        val bgEnd = bgSpans.lastOrNull()?.endMs ?: fallbackBgEnd
+                        bgPhrases.add(LyricPhrase(
                             text = bgText,
                             startMs = bgStart,
                             endMs = bgEnd,
                             spans = bgSpans,
                             words = bgWords
+                        ))
+                    }
+                }
+
+                val backgroundVoice: LyricPhrase? = when (bgPhrases.size) {
+                    0 -> null
+                    1 -> bgPhrases.first()
+                    else -> {
+                        val combinedText = bgPhrases.joinToString(" ") { it.text }
+                        val allSpans = bgPhrases.flatMap { it.spans }.sortedBy { it.startMs }
+                        val allWords = bgPhrases.flatMap { it.words }.sortedBy { it.startMs }
+                        LyricPhrase(
+                            text = combinedText,
+                            startMs = bgPhrases.minOf { it.startMs },
+                            endMs = bgPhrases.maxOf { it.endMs },
+                            spans = allSpans,
+                            words = allWords
                         )
                     }
                 }
@@ -241,7 +266,14 @@ class LyricsService(
             return lines
         }
 
-        private fun extractBgBlock(content: String): Pair<String, String>? {
+        private data class BgBlockResult(
+            val innerContent: String,
+            val bgBeginMs: Long?,
+            val bgEndMs: Long?,
+            val remainingContent: String
+        )
+
+        private fun extractBgBlock(content: String): BgBlockResult? {
             val idx = content.indexOf("ttm:role=\"x-bg\"")
             if (idx < 0) return null
             val startTag = content.lastIndexOf("<span", idx)
@@ -270,8 +302,22 @@ class LyricsService(
 
             if (endPos > startTag) {
                 val bgXml = content.substring(startTag, endPos)
-                val remaining = content.removeRange(startTag, endPos)
-                return Pair(bgXml, remaining)
+                val tagCloseIdx = bgXml.indexOf('>')
+                if (tagCloseIdx >= 0) {
+                    val openTag = bgXml.substring(0, tagCloseIdx + 1)
+                    val attrs = ATTR_REGEX.findAll(openTag).associate { it.groupValues[1] to it.groupValues[2] }
+                    val bgBeginMs = attrs["begin"]?.let { parseTimeMs(it) }
+                    val bgEndMs = attrs["end"]?.let { parseTimeMs(it) }
+                    val innerEnd = if (bgXml.endsWith("</span>")) bgXml.length - 7 else bgXml.length
+                    val innerContent = if (innerEnd > tagCloseIdx + 1) bgXml.substring(tagCloseIdx + 1, innerEnd) else ""
+                    val remaining = content.removeRange(startTag, endPos)
+                    return BgBlockResult(
+                        innerContent = innerContent,
+                        bgBeginMs = bgBeginMs,
+                        bgEndMs = bgEndMs,
+                        remainingContent = remaining
+                    )
+                }
             }
             return null
         }
@@ -284,13 +330,19 @@ class LyricsService(
         ): Triple<String, List<LyricSpan>, List<LyricWord>> {
             val spanMatches = SPAN_REGEX.findAll(content).toList()
             if (spanMatches.isEmpty()) {
-                var clean = content.replace(Regex("<[^>]+>"), "")
+                var clean = content.replace(HTML_TAG_REGEX, "")
                 clean = unescapeXml(clean)
+                clean = clean.replace(HTML_TAG_REGEX, "")
                 if (stripParens) {
                     clean = clean.replace("(", "").replace(")", "")
                 }
                 clean = clean.trim()
-                return Triple(clean, emptyList(), emptyList())
+                if (clean.isNotEmpty()) {
+                    val span = LyricSpan(text = clean, startMs = fallbackBeginMs, endMs = fallbackEndMs)
+                    val word = LyricWord(text = clean, startMs = fallbackBeginMs, endMs = fallbackEndMs, syllables = listOf(span))
+                    return Triple(clean, listOf(span), listOf(word))
+                }
+                return Triple("", emptyList(), emptyList())
             }
 
             val rawSpans = mutableListOf<Pair<LyricSpan, Boolean>>()
@@ -310,12 +362,14 @@ class LyricsService(
                 val sBeginMs = sBeginStr?.let { parseTimeMs(it) } ?: fallbackBeginMs
                 val sEndMs = sEndStr?.let { parseTimeMs(it) } ?: fallbackEndMs
 
-                var rawText = unescapeXml(spanInner)
+                // Strip ANY HTML tags inside spanInner or unescaped text
+                var rawText = spanInner.replace(HTML_TAG_REGEX, "")
+                rawText = unescapeXml(rawText).replace(HTML_TAG_REGEX, "")
                 if (stripParens) {
                     rawText = rawText.replace("(", "").replace(")", "")
                 }
                 val hasSpace = trailingSpace.isNotEmpty() || rawText.endsWith(" ")
-                val cleanText = rawText.trim()
+                val cleanText = rawText.replace(HTML_TAG_REGEX, "").trim()
 
                 if (cleanText.isNotEmpty()) {
                     val span = LyricSpan(
@@ -337,26 +391,37 @@ class LyricsService(
                 currentSyllables.add(span)
                 if (hasSpaceAfter) {
                     val wText = currentSyllables.joinToString("") { it.text }
+                        .replace(HTML_TAG_REGEX, "")
+                        .trim()
+                    if (wText.isNotEmpty()) {
+                        words.add(LyricWord(
+                            text = wText,
+                            startMs = currentSyllables.first().startMs,
+                            endMs = currentSyllables.last().endMs,
+                            syllables = currentSyllables
+                        ))
+                    }
+                    currentSyllables = mutableListOf()
+                }
+            }
+            if (currentSyllables.isNotEmpty()) {
+                val wText = currentSyllables.joinToString("") { it.text }
+                    .replace(HTML_TAG_REGEX, "")
+                    .trim()
+                if (wText.isNotEmpty()) {
                     words.add(LyricWord(
                         text = wText,
                         startMs = currentSyllables.first().startMs,
                         endMs = currentSyllables.last().endMs,
                         syllables = currentSyllables
                     ))
-                    currentSyllables = mutableListOf()
                 }
             }
-            if (currentSyllables.isNotEmpty()) {
-                val wText = currentSyllables.joinToString("") { it.text }
-                words.add(LyricWord(
-                    text = wText,
-                    startMs = currentSyllables.first().startMs,
-                    endMs = currentSyllables.last().endMs,
-                    syllables = currentSyllables
-                ))
-            }
 
-            return Triple(textBuilder.toString().trim(), rawSpans.map { it.first }, words)
+            val finalFullText = textBuilder.toString()
+                .replace(HTML_TAG_REGEX, "")
+                .trim()
+            return Triple(finalFullText, rawSpans.map { it.first }, words)
         }
 
         fun parseLrc(lrc: String): List<LyricLineDto> {
@@ -371,7 +436,7 @@ class LyricsService(
                     val sec = match.groupValues[2].toLongOrNull() ?: 0L
                     val msPart = match.groupValues[3].padEnd(3, '0').take(3).toLongOrNull() ?: 0L
                     val totalMs = (min * 60 + sec) * 1000 + msPart
-                    val text = match.groupValues[4].trim()
+                    val text = match.groupValues[4].replace(HTML_TAG_REGEX, "").trim()
                     if (text.isNotEmpty()) {
                         parsedLines.add(LyricLineDto(
                             text = text,
@@ -382,13 +447,16 @@ class LyricsService(
                         ))
                     }
                 } else if (!trimmed.startsWith("[")) {
-                    parsedLines.add(LyricLineDto(
-                        text = trimmed,
-                        startTicks = null,
-                        endTicks = null,
-                        spans = emptyList(),
-                        words = emptyList()
-                    ))
+                    val cleanText = trimmed.replace(HTML_TAG_REGEX, "").trim()
+                    if (cleanText.isNotEmpty()) {
+                        parsedLines.add(LyricLineDto(
+                            text = cleanText,
+                            startTicks = null,
+                            endTicks = null,
+                            spans = emptyList(),
+                            words = emptyList()
+                        ))
+                    }
                 }
             }
             return parsedLines
