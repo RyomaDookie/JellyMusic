@@ -189,95 +189,174 @@ class LyricsService(
                 val pBeginMs = pBeginStr?.let { parseTimeMs(it) } ?: 0L
                 val pEndMs = pEndStr?.let { parseTimeMs(it) } ?: 0L
 
-                val spanMatches = SPAN_REGEX.findAll(pContent).toList()
-                if (spanMatches.isNotEmpty()) {
-                    val rawSpans = mutableListOf<Pair<LyricSpan, Boolean>>()
-                    val lineTextBuilder = StringBuilder()
+                var currentContent = pContent
+                var backgroundVoice: LyricPhrase? = null
 
-                    for (spanMatch in spanMatches) {
-                        val spanAttrsRaw = spanMatch.groupValues[1]
-                        val spanInner = spanMatch.groupValues[2]
-                        val trailingSpace = spanMatch.groupValues[3]
+                // Extract any secondary vocal / ad-lib block marked with ttm:role="x-bg"
+                val bgExtracted = extractBgBlock(currentContent)
+                if (bgExtracted != null) {
+                    val (bgXml, remaining) = bgExtracted
+                    currentContent = remaining
 
-                        val sAttrs = ATTR_REGEX.findAll(spanAttrsRaw).associate {
-                            it.groupValues[1] to it.groupValues[2]
-                        }
-                        val sBeginStr = sAttrs["begin"]
-                        val sEndStr = sAttrs["end"]
-
-                        val sBeginMs = sBeginStr?.let { parseTimeMs(it) } ?: pBeginMs
-                        val sEndMs = sEndStr?.let { parseTimeMs(it) } ?: pEndMs
-
-                        val rawText = unescapeXml(spanInner)
-                        val hasSpace = trailingSpace.isNotEmpty() || rawText.endsWith(" ")
-                        val cleanText = rawText.trim()
-
-                        if (cleanText.isNotEmpty()) {
-                            val span = LyricSpan(
-                                text = cleanText,
-                                startMs = sBeginMs,
-                                endMs = sEndMs
-                            )
-                            rawSpans.add(span to hasSpace)
-                            lineTextBuilder.append(cleanText)
-                            if (hasSpace) lineTextBuilder.append(" ")
-                        }
+                    val (bgText, bgSpans, bgWords) = parseSpansAndWords(bgXml, pBeginMs, pEndMs, stripParens = true)
+                    if (bgText.isNotBlank()) {
+                        val bgStart = bgSpans.firstOrNull()?.startMs ?: pBeginMs
+                        val bgEnd = bgSpans.lastOrNull()?.endMs ?: pEndMs
+                        backgroundVoice = LyricPhrase(
+                            text = bgText,
+                            startMs = bgStart,
+                            endMs = bgEnd,
+                            spans = bgSpans,
+                            words = bgWords
+                        )
                     }
+                }
 
-                    // Group spans into words for smooth FlowRow wrapping
-                    val words = mutableListOf<LyricWord>()
-                    var currentSyllables = mutableListOf<LyricSpan>()
+                // Parse main voice
+                val (mainText, mainSpans, mainWords) = parseSpansAndWords(currentContent, pBeginMs, pEndMs, stripParens = false)
 
-                    for ((span, hasSpaceAfter) in rawSpans) {
-                        currentSyllables.add(span)
-                        if (hasSpaceAfter) {
-                            val wText = currentSyllables.joinToString("") { it.text }
-                            words.add(LyricWord(
-                                text = wText,
-                                startMs = currentSyllables.first().startMs,
-                                endMs = currentSyllables.last().endMs,
-                                syllables = currentSyllables
-                            ))
-                            currentSyllables = mutableListOf()
-                        }
-                    }
-                    if (currentSyllables.isNotEmpty()) {
-                        val wText = currentSyllables.joinToString("") { it.text }
-                        words.add(LyricWord(
-                            text = wText,
-                            startMs = currentSyllables.first().startMs,
-                            endMs = currentSyllables.last().endMs,
-                            syllables = currentSyllables
-                        ))
-                    }
-
-                    val lineText = lineTextBuilder.toString().trim()
-                    if (lineText.isNotEmpty()) {
-                        val lineStart = rawSpans.firstOrNull()?.first?.startMs ?: pBeginMs
-                        val lineEnd = rawSpans.lastOrNull()?.first?.endMs ?: pEndMs
-                        lines.add(LyricLineDto(
-                            text = lineText,
-                            startTicks = lineStart * 10_000L,
-                            endTicks = lineEnd * 10_000L,
-                            spans = rawSpans.map { it.first },
-                            words = words
-                        ))
-                    }
-                } else {
-                    val rawText = pContent.replace(Regex("<[^>]+>"), "").trim()
-                    val decoded = unescapeXml(rawText)
-                    if (decoded.isNotEmpty()) {
-                        lines.add(LyricLineDto(
-                            text = decoded,
-                            startTicks = pBeginMs * 10_000L,
-                            endTicks = pEndMs * 10_000L,
-                            spans = emptyList(),
-                            words = emptyList()
-                        ))
-                    }
+                if (mainText.isNotBlank()) {
+                    val lineStart = mainSpans.firstOrNull()?.startMs ?: pBeginMs
+                    val lineEnd = mainSpans.lastOrNull()?.endMs ?: pEndMs
+                    lines.add(LyricLineDto(
+                        text = mainText,
+                        startTicks = lineStart * 10_000L,
+                        endTicks = lineEnd * 10_000L,
+                        spans = mainSpans,
+                        words = mainWords,
+                        backgroundVoice = backgroundVoice
+                    ))
+                } else if (backgroundVoice != null) {
+                    // Solo ad-lib line
+                    lines.add(LyricLineDto(
+                        text = backgroundVoice.text,
+                        startTicks = backgroundVoice.startMs * 10_000L,
+                        endTicks = backgroundVoice.endMs * 10_000L,
+                        spans = backgroundVoice.spans,
+                        words = backgroundVoice.words,
+                        backgroundVoice = null
+                    ))
                 }
             }
             return lines
+        }
+
+        private fun extractBgBlock(content: String): Pair<String, String>? {
+            val idx = content.indexOf("ttm:role=\"x-bg\"")
+            if (idx < 0) return null
+            val startTag = content.lastIndexOf("<span", idx)
+            if (startTag < 0) return null
+
+            var pos = startTag
+            var depth = 0
+            var endPos = -1
+            while (pos < content.length) {
+                val nextOpen = content.indexOf("<span", pos)
+                val nextClose = content.indexOf("</span>", pos)
+                if (nextClose < 0) break
+
+                if (nextOpen in 0 until nextClose) {
+                    depth++
+                    pos = nextOpen + 5
+                } else {
+                    depth--
+                    pos = nextClose + 7
+                    if (depth == 0) {
+                        endPos = pos
+                        break
+                    }
+                }
+            }
+
+            if (endPos > startTag) {
+                val bgXml = content.substring(startTag, endPos)
+                val remaining = content.removeRange(startTag, endPos)
+                return Pair(bgXml, remaining)
+            }
+            return null
+        }
+
+        private fun parseSpansAndWords(
+            content: String,
+            fallbackBeginMs: Long,
+            fallbackEndMs: Long,
+            stripParens: Boolean = false
+        ): Triple<String, List<LyricSpan>, List<LyricWord>> {
+            val spanMatches = SPAN_REGEX.findAll(content).toList()
+            if (spanMatches.isEmpty()) {
+                var clean = content.replace(Regex("<[^>]+>"), "")
+                clean = unescapeXml(clean)
+                if (stripParens) {
+                    clean = clean.replace("(", "").replace(")", "")
+                }
+                clean = clean.trim()
+                return Triple(clean, emptyList(), emptyList())
+            }
+
+            val rawSpans = mutableListOf<Pair<LyricSpan, Boolean>>()
+            val textBuilder = StringBuilder()
+
+            for (spanMatch in spanMatches) {
+                val spanAttrsRaw = spanMatch.groupValues[1]
+                val spanInner = spanMatch.groupValues[2]
+                val trailingSpace = spanMatch.groupValues[3]
+
+                val sAttrs = ATTR_REGEX.findAll(spanAttrsRaw).associate {
+                    it.groupValues[1] to it.groupValues[2]
+                }
+                val sBeginStr = sAttrs["begin"]
+                val sEndStr = sAttrs["end"]
+
+                val sBeginMs = sBeginStr?.let { parseTimeMs(it) } ?: fallbackBeginMs
+                val sEndMs = sEndStr?.let { parseTimeMs(it) } ?: fallbackEndMs
+
+                var rawText = unescapeXml(spanInner)
+                if (stripParens) {
+                    rawText = rawText.replace("(", "").replace(")", "")
+                }
+                val hasSpace = trailingSpace.isNotEmpty() || rawText.endsWith(" ")
+                val cleanText = rawText.trim()
+
+                if (cleanText.isNotEmpty()) {
+                    val span = LyricSpan(
+                        text = cleanText,
+                        startMs = sBeginMs,
+                        endMs = sEndMs
+                    )
+                    rawSpans.add(span to hasSpace)
+                    textBuilder.append(cleanText)
+                    if (hasSpace) textBuilder.append(" ")
+                }
+            }
+
+            // Group spans into atomic words for natural FlowRow wrapping
+            val words = mutableListOf<LyricWord>()
+            var currentSyllables = mutableListOf<LyricSpan>()
+
+            for ((span, hasSpaceAfter) in rawSpans) {
+                currentSyllables.add(span)
+                if (hasSpaceAfter) {
+                    val wText = currentSyllables.joinToString("") { it.text }
+                    words.add(LyricWord(
+                        text = wText,
+                        startMs = currentSyllables.first().startMs,
+                        endMs = currentSyllables.last().endMs,
+                        syllables = currentSyllables
+                    ))
+                    currentSyllables = mutableListOf()
+                }
+            }
+            if (currentSyllables.isNotEmpty()) {
+                val wText = currentSyllables.joinToString("") { it.text }
+                words.add(LyricWord(
+                    text = wText,
+                    startMs = currentSyllables.first().startMs,
+                    endMs = currentSyllables.last().endMs,
+                    syllables = currentSyllables
+                ))
+            }
+
+            return Triple(textBuilder.toString().trim(), rawSpans.map { it.first }, words)
         }
 
         fun parseLrc(lrc: String): List<LyricLineDto> {

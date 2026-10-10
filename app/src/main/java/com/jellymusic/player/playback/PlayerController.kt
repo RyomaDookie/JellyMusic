@@ -138,6 +138,8 @@ class PlayerController(
         }
     }
 
+    fun getCurrentPositionMs(): Long = exoPlayer?.currentPosition?.coerceAtLeast(0L) ?: 0L
+
     private fun startProgressTracker() {
         stopProgressTracker()
         progressJob = scope.launch {
@@ -148,7 +150,7 @@ class PlayerController(
                         durationMs = player.duration.coerceAtLeast(0L)
                     )
                 }
-                delay(25)
+                delay(200)
             }
         }
     }

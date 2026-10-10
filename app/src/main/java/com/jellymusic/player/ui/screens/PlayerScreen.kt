@@ -86,14 +86,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import com.jellymusic.player.data.LyricLineDto
+import com.jellymusic.player.data.LyricPhrase
 import com.jellymusic.player.data.LyricSpan
 import com.jellymusic.player.data.LyricWord
 import androidx.compose.foundation.layout.FlowRow
@@ -782,6 +788,7 @@ fun PlayerScreen(
                         LyricsPanel(
                             lyrics = lyrics,
                             isLoading = isLoadingLyrics,
+                            isPlaying = playbackState.isPlaying,
                             currentPositionMs = currentMs,
                             durationMs = durationMs,
                             onSeek = { controller.seekTo(it) }
@@ -1727,6 +1734,7 @@ private fun Modifier.pressScale(interactionSource: MutableInteractionSource): Mo
 private fun LyricsPanel(
     lyrics: List<LyricLineDto>,
     isLoading: Boolean,
+    isPlaying: Boolean,
     currentPositionMs: Long,
     durationMs: Long,
     onSeek: (Long) -> Unit
@@ -1770,14 +1778,38 @@ private fun LyricsPanel(
         return
     }
 
-    val hasTimestamps = lyrics.any { it.startTicks != null }
-    val activeIndex = remember(lyrics, currentPositionMs) {
-        if (hasTimestamps) {
-            val found = lyrics.indexOfLast { it.startMs <= currentPositionMs }
-            if (found >= 0) found else 0
+    val controller = JellyMusicApp.instance.playerController
+    val playTimeMs = remember { mutableLongStateOf(currentPositionMs) }
+
+    LaunchedEffect(currentPositionMs) {
+        playTimeMs.longValue = currentPositionMs
+    }
+
+    // Hardware VSYNC-aligned frame clock (120Hz on S25 Ultra)
+    // Deferring playback read to the Draw phase completely skips recomposition thrashing!
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            while (isActive) {
+                withFrameMillis {
+                    playTimeMs.longValue = controller.getCurrentPositionMs()
+                }
+            }
         } else {
-            ((currentPositionMs.toFloat() / durationMs.toFloat()) * lyrics.size)
-                .toInt().coerceIn(0, lyrics.lastIndex)
+            playTimeMs.longValue = currentPositionMs
+        }
+    }
+
+    val hasTimestamps = lyrics.any { it.startTicks != null }
+    val activeIndex by remember(lyrics) {
+        derivedStateOf {
+            val pos = playTimeMs.longValue
+            if (hasTimestamps) {
+                val found = lyrics.indexOfLast { it.startMs <= pos }
+                if (found >= 0) found else 0
+            } else {
+                ((pos.toFloat() / durationMs.toFloat()) * lyrics.size)
+                    .toInt().coerceIn(0, lyrics.lastIndex)
+            }
         }
     }
 
@@ -1794,10 +1826,9 @@ private fun LyricsPanel(
                 val info = listState.layoutInfo
                 val item = info.visibleItemsInfo.firstOrNull { it.index == activeIndex }
                 if (item != null) {
-                    // Long eased glide; the active line always settles at the top padding
                     listState.animateScrollBy(
                         (item.offset - info.beforeContentPadding).toFloat(),
-                        tween(durationMillis = 1000, easing = bezierEasing)
+                        tween(durationMillis = 800, easing = bezierEasing)
                     )
                 } else {
                     listState.animateScrollToItem(index = activeIndex, scrollOffset = 0)
@@ -1840,7 +1871,7 @@ private fun LyricsPanel(
                     isActive = isActive,
                     isPast = isPast,
                     distance = distance,
-                    currentPositionMs = currentPositionMs,
+                    playTimeMs = playTimeMs,
                     bezierEasing = bezierEasing,
                     onClick = {
                         val seekTarget = if (line.startTicks != null) {
@@ -1863,7 +1894,7 @@ private fun LyricLineItem(
     isActive: Boolean,
     isPast: Boolean,
     distance: Int,
-    currentPositionMs: Long,
+    playTimeMs: State<Long>,
     bezierEasing: CubicBezierEasing,
     onClick: () -> Unit
 ) {
@@ -1881,7 +1912,6 @@ private fun LyricLineItem(
     }
     val targetScale = if (isActive) 1.0f else 0.92f
 
-    // Relaxed glide spec matching Apple Music lyric focus transitions
     val relaxed = tween<Float>(durationMillis = 800, easing = bezierEasing)
     val animatedAlpha by animateFloatAsState(targetAlpha, relaxed, label = "lyricAlpha")
     val animatedScale by animateFloatAsState(targetScale, relaxed, label = "lyricScale")
@@ -1907,99 +1937,172 @@ private fun LyricLineItem(
             .blur(animatedBlur)
             .padding(vertical = 6.dp)
     ) {
-        if (isActive && line.hasSyllables) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                line.words.forEach { word ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        word.syllables.forEach { syllable ->
-                            SyllableItem(
-                                syllable = syllable,
-                                currentMs = currentPositionMs,
-                                isActiveLine = isActive
-                            )
-                        }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Secondary voice / ad-lib ABOVE main text if it started before main voice
+            if (line.backgroundVoice != null && line.isBgAbove) {
+                BackgroundVoiceRow(
+                    phrase = line.backgroundVoice,
+                    playTimeMs = playTimeMs,
+                    isActiveLine = isActive
+                )
+            }
+
+            // Main voice line
+            MainVoiceRow(
+                line = line,
+                playTimeMs = playTimeMs,
+                isActiveLine = isActive
+            )
+
+            // Secondary voice / ad-lib BELOW main text if it started during or after main voice
+            if (line.backgroundVoice != null && !line.isBgAbove) {
+                BackgroundVoiceRow(
+                    phrase = line.backgroundVoice,
+                    playTimeMs = playTimeMs,
+                    isActiveLine = isActive
+                )
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun MainVoiceRow(
+    line: LyricLineDto,
+    playTimeMs: State<Long>,
+    isActiveLine: Boolean
+) {
+    if (isActiveLine && line.hasSyllables) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            line.words.forEach { word ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    word.syllables.forEach { syllable ->
+                        SyllableItem(
+                            syllable = syllable,
+                            playTimeMs = playTimeMs,
+                            isActiveLine = true,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 36.sp
+                        )
                     }
                 }
             }
-        } else {
-            Text(
-                text = line.text,
-                fontSize = 26.sp,
-                fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
-                color = if (isActive) Color.White else ArtworkTextPrimary,
-                style = if (isActive) {
-                    androidx.compose.ui.text.TextStyle(
-                        shadow = androidx.compose.ui.graphics.Shadow(
-                            color = Color.White.copy(alpha = 0.55f),
-                            blurRadius = 14f
-                        )
-                    )
-                } else {
-                    androidx.compose.ui.text.TextStyle.Default
-                },
-                lineHeight = 36.sp,
-                letterSpacing = (-0.015).sp
-            )
         }
+    } else {
+        Text(
+            text = line.text,
+            fontSize = 26.sp,
+            fontWeight = if (isActiveLine) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (isActiveLine) Color.White else Color.White.copy(alpha = 0.35f),
+            lineHeight = 36.sp,
+            letterSpacing = (-0.015).sp
+        )
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun BackgroundVoiceRow(
+    phrase: LyricPhrase,
+    playTimeMs: State<Long>,
+    isActiveLine: Boolean
+) {
+    if (isActiveLine && phrase.words.isNotEmpty()) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            phrase.words.forEach { word ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    word.syllables.forEach { syllable ->
+                        SyllableItem(
+                            syllable = syllable,
+                            playTimeMs = playTimeMs,
+                            isActiveLine = true,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 24.sp
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        Text(
+            text = phrase.text,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isActiveLine) Color.White else Color.White.copy(alpha = 0.35f),
+            lineHeight = 24.sp,
+            letterSpacing = (-0.01).sp
+        )
     }
 }
 
 @Composable
 private fun SyllableItem(
     syllable: LyricSpan,
-    currentMs: Long,
-    isActiveLine: Boolean
+    playTimeMs: State<Long>,
+    isActiveLine: Boolean,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontWeight: FontWeight,
+    lineHeight: androidx.compose.ui.unit.TextUnit
 ) {
-    val duration = (syllable.endMs - syllable.startMs).coerceAtLeast(1L)
-    val progress = when {
-        !isActiveLine || currentMs < syllable.startMs -> 0f
-        currentMs >= syllable.endMs -> 1f
-        else -> ((currentMs - syllable.startMs).toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-    }
-
-    Box(
-        contentAlignment = Alignment.CenterStart
-    ) {
+    Box(contentAlignment = Alignment.CenterStart) {
         // Base muted text (un-sung state)
         Text(
             text = syllable.text,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White.copy(alpha = 0.30f),
-            lineHeight = 36.sp,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            color = Color.White.copy(alpha = 0.32f),
+            lineHeight = lineHeight,
             letterSpacing = (-0.015).sp
         )
-        // Glowing white text revealed from left to right as syllable is sung
-        if (progress > 0f) {
+        // Clean crisp white text clipped smoothly by progress (GPU-accelerated scissor, zero halo!)
+        if (isActiveLine) {
             Box(
                 modifier = Modifier.drawWithContent {
-                    if (progress < 1f) {
-                        clipRect(left = 0f, top = 0f, right = size.width * progress, bottom = size.height) {
+                    val currentMs = playTimeMs.value
+                    val startMs = syllable.startMs
+                    val endMs = syllable.endMs
+                    val duration = (endMs - startMs).coerceAtLeast(1L)
+                    val progress = when {
+                        currentMs < startMs -> 0f
+                        currentMs >= endMs -> 1f
+                        else -> ((currentMs - startMs).toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    }
+
+                    if (progress > 0f) {
+                        if (progress < 1f) {
+                            clipRect(left = 0f, top = 0f, right = size.width * progress, bottom = size.height) {
+                                this@drawWithContent.drawContent()
+                            }
+                        } else {
                             this@drawWithContent.drawContent()
                         }
-                    } else {
-                        this@drawWithContent.drawContent()
                     }
                 }
             ) {
                 Text(
                     text = syllable.text,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = fontSize,
+                    fontWeight = fontWeight,
                     color = Color.White,
-                    style = androidx.compose.ui.text.TextStyle(
-                        shadow = androidx.compose.ui.graphics.Shadow(
-                            color = Color.White.copy(alpha = 0.70f),
-                            blurRadius = 16f
-                        )
-                    ),
-                    lineHeight = 36.sp,
+                    lineHeight = lineHeight,
                     letterSpacing = (-0.015).sp
                 )
             }
