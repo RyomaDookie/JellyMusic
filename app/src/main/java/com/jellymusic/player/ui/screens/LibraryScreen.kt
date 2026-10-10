@@ -1257,7 +1257,7 @@ private fun AlbumCard(
     album: JellyfinItem,
     isPlaying: Boolean,
     onClick: () -> Unit,
-    onQuickPlay: () -> Unit,
+    onQuickPlay: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val client = JellyMusicApp.instance.jellyfinClient
@@ -1281,26 +1281,17 @@ private fun AlbumCard(
                 contentScale = ContentScale.Crop
             )
 
-            // Quick Play Button Overlay
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable { onQuickPlay() },
-                contentAlignment = Alignment.Center
-            ) {
-                if (isPlaying) {
+            if (isPlaying) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xB3000000))
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     AnimatedEqualizer()
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Riproduci",
-                        tint = Color.Black,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
         }
@@ -1327,7 +1318,7 @@ private fun AlbumCard(
 }
 
 /**
- * 2-Column Track Card for Grid view (NO quality badges).
+ * 2-Column Track Card for Grid view (NO quality badges, NO play button on cover).
  */
 @Composable
 private fun TrackGridCard(
@@ -1357,25 +1348,17 @@ private fun TrackGridCard(
                 contentScale = ContentScale.Crop
             )
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable { onPlay() },
-                contentAlignment = Alignment.Center
-            ) {
-                if (isPlaying) {
+            if (isPlaying) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xB3000000))
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     AnimatedEqualizer()
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Riproduci",
-                        tint = Color.Black,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
         }
@@ -1402,13 +1385,13 @@ private fun TrackGridCard(
 }
 
 /**
- * 2-Column Playlist Card with real Jellyfin artwork.
+ * 2-Column Playlist Card with real Jellyfin artwork (NO play button on cover).
  */
 @Composable
 private fun PlaylistGridCard(
     playlist: JellyfinItem,
     onClick: () -> Unit,
-    onQuickPlay: () -> Unit,
+    onQuickPlay: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val client = JellyMusicApp.instance.jellyfinClient
@@ -1431,24 +1414,6 @@ private fun PlaylistGridCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable { onQuickPlay() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Riproduci",
-                    tint = Color.Black,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))

@@ -128,18 +128,7 @@ fun HomeScreen(
     }
 
     val favoriteTracks = remember(tracks) { tracks.filter { it.isFavorite } }
-
-    var selectedFilter by remember { mutableStateOf("Tutti") }
-    val filterOptions = listOf("Tutti", "Brani", "Preferiti", "Recenti")
-
-    val displayFeedTracks = remember(selectedFilter, tracks, favoriteTracks, recentTracks) {
-        when (selectedFilter) {
-            "Preferiti" -> favoriteTracks
-            "Recenti" -> recentTracks
-            "Brani" -> tracks
-            else -> tracks.take(15)
-        }
-    }
+    val displayFeedTracks = remember(tracks) { tracks.take(20) }
 
     val dateText = remember {
         SimpleDateFormat("EEEE d MMMM", Locale.ITALIAN).format(Date())
@@ -245,46 +234,6 @@ fun HomeScreen(
                 }
             }
 
-            // --- Apple-style Segment / Filter Pills ---
-            item {
-                AppleIn("filters", 1, seen) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filterOptions.size) { idx ->
-                            val label = filterOptions[idx]
-                            val isSelected = selectedFilter == label
-                            val pillSrc = remember { MutableInteractionSource() }
-                            Box(
-                                modifier = Modifier
-                                    .pressSpring(pillSrc)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(
-                                        if (isSelected) Color.White
-                                        else Color(0x14FFFFFF)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (isSelected) Color.White else AppleCardBorder,
-                                        RoundedCornerShape(16.dp)
-                                    )
-                                    .clickable(interactionSource = pillSrc, indication = null) {
-                                        selectedFilter = label
-                                    }
-                                    .padding(horizontal = 14.dp, vertical = 7.dp)
-                            ) {
-                                Text(
-                                    text = label,
-                                    color = if (isSelected) Color.Black else AppleMuted,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
 
             // --- Hero: Continue Listening (Apple Music Card) ---
             item {
@@ -484,12 +433,7 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = when (selectedFilter) {
-                                    "Preferiti" -> "I tuoi preferiti"
-                                    "Recenti" -> "Cronologia di ascolto"
-                                    "Brani" -> "Tutti i brani"
-                                    else -> "Brani consigliati"
-                                },
+                                text = "Brani consigliati",
                                 color = Color.White,
                                 fontSize = 21.sp,
                                 fontWeight = FontWeight.Bold,

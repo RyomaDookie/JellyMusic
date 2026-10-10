@@ -878,17 +878,19 @@ fun PlayerScreen(
             }
         }
 
+        val speedControlsAlpha = (1f - speedDialogAnim.value).coerceIn(0f, 1f)
+
         // Shuffle Button
         if (shuffleAlpha > 0.001f) {
             val shuffleInteraction = remember { MutableInteractionSource() }
             IconButton(
                 onClick = { controller.toggleShuffle() },
                 interactionSource = shuffleInteraction,
-                enabled = p > 0.6f,
+                enabled = p > 0.6f && !showSpeedDialog,
                 modifier = Modifier
                     .offset(x = shuffleCx - 22.dp, y = controlsCenterY - 22.dp)
                     .size(44.dp)
-                    .graphicsLayer { alpha = shuffleAlpha }
+                    .graphicsLayer { alpha = shuffleAlpha * speedControlsAlpha }
                     .pressScale(shuffleInteraction)
             ) {
                 Icon(
@@ -909,11 +911,11 @@ fun PlayerScreen(
                     controller.skipPrevious()
                 },
                 interactionSource = prevInteraction,
-                enabled = p > 0.6f,
+                enabled = p > 0.6f && !showSpeedDialog,
                 modifier = Modifier
                     .offset(x = prevCx - 32.dp, y = controlsCenterY - 32.dp)
                     .size(64.dp)
-                    .graphicsLayer { alpha = prevAlpha }
+                    .graphicsLayer { alpha = prevAlpha * speedControlsAlpha }
                     .pressScale(prevInteraction)
             ) {
                 Icon(
@@ -930,9 +932,11 @@ fun PlayerScreen(
         IconButton(
             onClick = { controller.togglePlayPause() },
             interactionSource = playInteraction,
+            enabled = !showSpeedDialog,
             modifier = Modifier
                 .offset(x = playCx - (playBtnSize / 2), y = controlsCenterY - (playBtnSize / 2))
                 .size(playBtnSize)
+                .graphicsLayer { alpha = speedControlsAlpha }
                 .pressScale(playInteraction)
         ) {
             Icon(
@@ -956,9 +960,11 @@ fun PlayerScreen(
                 controller.skipNext()
             },
             interactionSource = nextInteraction,
+            enabled = !showSpeedDialog,
             modifier = Modifier
                 .offset(x = nextCx - (nextBtnSize / 2), y = controlsCenterY - (nextBtnSize / 2))
                 .size(nextBtnSize)
+                .graphicsLayer { alpha = speedControlsAlpha }
                 .pressScale(nextInteraction)
         ) {
             Icon(
@@ -980,11 +986,11 @@ fun PlayerScreen(
             IconButton(
                 onClick = { controller.cycleRepeatMode() },
                 interactionSource = repeatInteraction,
-                enabled = p > 0.6f,
+                enabled = p > 0.6f && !showSpeedDialog,
                 modifier = Modifier
                     .offset(x = repeatCx - 22.dp, y = controlsCenterY - 22.dp)
                     .size(44.dp)
-                    .graphicsLayer { alpha = repeatAlpha }
+                    .graphicsLayer { alpha = repeatAlpha * speedControlsAlpha }
                     .pressScale(repeatInteraction)
             ) {
                 val icon = if (playbackState.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
@@ -1005,7 +1011,7 @@ fun PlayerScreen(
                     .offset(x = scrubX, y = volTop - ct)
                     .width(scrubW)
                     .graphicsLayer {
-                        alpha = volAlpha
+                        alpha = volAlpha * speedControlsAlpha
                         translationY = with(density) { volShiftY.toPx() }
                     },
                 verticalAlignment = Alignment.CenterVertically,
@@ -1078,7 +1084,7 @@ fun PlayerScreen(
                     .offset(x = scrubX, y = bottomTop - ct)
                     .width(scrubW)
                     .graphicsLayer {
-                        alpha = bottomAlpha
+                        alpha = bottomAlpha * speedControlsAlpha
                         translationY = with(density) { bottomShiftY.toPx() }
                     },
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1385,7 +1391,7 @@ private fun PlaybackSpeedDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Color.Black.copy(alpha = 0.25f * smoothT))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -1397,27 +1403,33 @@ private fun PlaybackSpeedDialog(
                 .offset(x = boxX, y = boxY)
                 .size(width = boxW, height = boxH)
                 .clip(RoundedCornerShape(boxR))
-                .border(1.dp, Color(0x38FFFFFF), RoundedCornerShape(boxR))
+                .border(
+                    1.dp,
+                    Color.White.copy(alpha = lerpFloat(0.22f, 0.28f, smoothT)),
+                    RoundedCornerShape(boxR)
+                )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) { /* Consume click inside */ }
         ) {
-            // Frosted blur backdrop layer inside the box (BEHIND the buttons, slider, and text)
+            // Dark frosted blur backdrop layer inside the box (BEHIND the buttons, slider, and text)
+            val darkBaseAlpha = lerpFloat(0.22f, 0.94f, smoothT)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(boxR))
+                    .background(Color(0xFF141418).copy(alpha = darkBaseAlpha))
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0x38FFFFFF),
-                                Color(0x1CFFFFFF),
-                                Color(0x28FFFFFF)
+                                Color(0x35FFFFFF),
+                                Color(0x10FFFFFF),
+                                Color(0x22FFFFFF)
                             )
                         )
                     )
-                    .blur(8.dp)
+                    .blur(20.dp)
             )
 
             // Number & Tune Icon: expands and travels seamlessly from pill center to top of the minimal card
